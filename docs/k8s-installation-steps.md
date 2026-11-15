@@ -1,0 +1,1053 @@
+# Guía de Instalación de Kubernetes en Producción
+## Simulación de Entorno Productivo con Ubuntu 22.04, VirtualBox 7.0, Kubeadm y Vagrant
+
+**Autor:** Equipo Docente de Kubernetes  
+**Documento Oficial del Curso:** Capítulo 1 - Despliegue de Infraestructura  
+**Entregable:** `k8s-installation-steps.pdf`
+
+---
+
+## Tabla de Contenidos
+
+1. [Arquitectura del Laboratorio](#1-arquitectura-del-laboratorio)
+   - 1.1 Diagrama de Topología
+   - 1.2 Matriz de Hardware e IP
+   - 1.3 Alertas Críticas de Producción
+2. [Sección 1: Despliegue Manual Paso a Paso con Kubeadm](#2-sección-1-despliegue-manual-paso-a-paso-con-kubeadm)
+   - 2.1 Creación de la Red Solo-Anfitrión en VirtualBox (`vboxnet0`)
+   - 2.2 Creación y Configuración de VMs en VirtualBox 7.0
+   - 2.3 Configuración de Idioma y Teclado Español
+   - 2.4 Persistencia de Red: Bloqueo de Cloud-Init y Netplan Estático
+   - 2.5 Preparación Base del Sistema Operativo (SWAP, Kernel y Sysctl)
+   - 2.6 Instalación de Containerd y Dependencias del Sistema (`conntrack`, `socat`)
+   - 2.7 Instalación de Herramientas Kubernetes (v1.31 en pkgs.k8s.io)
+   - 2.8 Inicialización del Plano de Control (Master), Flannel CNI y Registros Reales
+   - 2.9 Unión del Nodo Worker al Cluster con Dependencias y Registros Reales
+   - 2.10 Conexión Remota No Destructiva desde el Host Anfitrión (Merge Kubeconfig)
+   - 2.11 Instalación y Acceso al Kubernetes Dashboard
+3. [Sección 2: Automatización Completa con Vagrant (IaC)](#3-sección-2-automatización-completa-con-vagrant-iac)
+   - 3.1 Introducción a Vagrant para Kubernetes
+   - 3.2 Estructura del Proyecto de Automatización
+   - 3.3 El Archivo `Vagrantfile` Multi-Máquina
+   - 3.4 Scripts Shell de Aprovisionamiento Modular
+   - 3.5 Despliegue Desatendido con `vagrant up`
+   - 3.6 Gestión del Ciclo de Vida del Cluster
+4. [Resolución de Problemas Frecuentes (Troubleshooting)](#4-resolución-de-problemas-frecuentes-troubleshooting)
+
+---
+
+## 1. Arquitectura del Laboratorio
+
+### 1.1 Diagrama de Topología
+
+```text
++-----------------------------------------------------------------------------------+
+|  HOST FÍSICO: Ubuntu 20.04 LTS (con VirtualBox 7.0 instalado)                     |
+|  IP Red Host-Only: 192.168.56.1                                                   |
+|  Gestión: Cliente kubectl instalado en el host apuntando a 192.168.56.10:6443     |
++-----------------------------------------------------------------------------------+
+       |                                                    |
+       | Red Host-Only (vboxnet0: 192.168.56.0/24)          | Red NAT (Salida a Internet)
+       v                                                    v
++--------------------------------------+   +--------------------------------------+
+| VM: k8s-master                       |   | VM: k8s-worker1                      |
+| Sistema: Ubuntu Server 22.04 LTS     |   | Sistema: Ubuntu Server 22.04 LTS     |
+| CPU: 2 vCPUs | RAM: 3072 MB (3 GB)   |   | CPU: 2 vCPUs | RAM: 2048 MB (2 GB)   |
+| Disco: 25 GB                         |   | Disco: 20 GB                         |
+| Adaptador 1 (NAT): 10.0.2.15         |   | Adaptador 1 (NAT): 10.0.2.15         |
+| Adaptador 2 (Host-Only):             |   | Adaptador 2 (Host-Only):             |
+|   192.168.56.10                      |   |   192.168.56.11                      |
+| Roles: Control Plane                 |   | Roles: Worker Node                   |
+|   - kube-apiserver, etcd, scheduler  |   |   - kubelet, kube-proxy              |
+|   - controller-manager, kubelet      |   |   - containerd                       |
+|   - containerd, Flannel CNI          |   |   - Flannel CNI                      |
+|   - Kubernetes Dashboard             |   |                                      |
++--------------------------------------+   +--------------------------------------+
+       ^                                                    ^
+       +================ Red de Pods (CIDR: 10.244.0.0/16) =+
+```
+
+### 1.2 Matriz de Hardware e IP
+
+| Máquina | Rol | vCPU | RAM | Disco | Adaptador 1 (NAT) | Adaptador 2 (Host-Only) |
+| :--- | :--- | :---: | :---: | :---: | :--- | :--- |
+| **k8s-master** | Control Plane | 2 | 3072 MB | 25 GB | DHCP (`10.0.2.15`) | Estática: `192.168.56.10/24` |
+| **k8s-worker1** | Worker | 2 | 2048 MB | 20 GB | DHCP (`10.0.2.15`) | Estática: `192.168.56.11/24` |
+
+---
+
+### 1.3 Alertas Críticas de Producción
+
+> [!WARNING]
+> **1. Selección de Interfaz en Entornos de Red Dual (VirtualBox):**
+> Dado que ambas máquinas virtuales comparten la misma dirección IP en el adaptador NAT (`10.0.2.15`), el plugin de red CNI (Flannel) y el `apiserver` deben configurarse de manera obligatoria para enlazarse a la interfaz del adaptador Host-Only (`enp0s8` / `192.168.56.x`). Si esto se omite, los nodos intentarán comunicarse entre sí usando la IP NAT colisionada y el cluster no alcanzará el estado operativo.
+
+> [!WARNING]
+> **2. Espacio de Direccionamiento de Pods (CIDR) sin Solapamiento:**
+> La red de pods se establece en `10.244.0.0/16`. No debe utilizarse `192.168.0.0/16` si la red Host-Only es `192.168.56.0/24`, ya que generaría un conflicto de enrutamiento que aislaría el tráfico de red interno.
+
+> [!WARNING]
+> **3. Repositorio Oficial Moderno de Kubernetes (`pkgs.k8s.io`):**
+> Los antiguos repositorios de Google en `apt.kubernetes.io` y `packages.cloud.google.com` fueron congelados y retirados definitivamente en 2024. Se debe utilizar exclusivamente el repositorio comunitario moderno alojado en `https://pkgs.k8s.io/core:/stable:/v1.31/deb/`.
+
+---
+
+## 2. Sección 1: Despliegue Manual Paso a Paso con Kubeadm
+
+En esta primera sección, los alumnos realizarán la configuración manual completa de cada capa para asimilar en profundidad la arquitectura interna de un cluster de Kubernetes productivo.
+
+---
+
+### 2.1 Creación de la Red Solo-Anfitrión en VirtualBox (`vboxnet0`)
+
+Antes de crear o iniciar las máquinas virtuales, es indispensable aprovisionar la red privada aislada (Host-Only) en VirtualBox que interconectará el nodo de control, el worker y la máquina anfitriona.
+
+#### Procedimiento en VirtualBox:
+1. En la ventana principal de VirtualBox, accede al menú superior: **Archivo -> Herramientas -> Administrador de red de host** (o pestaña lateral **Herramientas -> Redes**).
+2. Haz clic en el botón **+** (**Crear**) para generar una nueva red sólo-anfitrión. Por defecto se creará con el nombre **`vboxnet0`**.
+3. Selecciona `vboxnet0` y configura sus parámetros en la pestaña *Adaptador*:
+   * **Dirección IPv4:** `192.168.56.1`
+   * **Máscara de red IPv4:** `255.255.255.0` (`/24`)
+4. En la pestaña *Servidor DHCP*:
+   * Puedes dejar desmarcada la opción *Habilitar servidor* (recomendado), ya que asignaremos direccionamiento estático persistente mediante Netplan en cada máquina virtual.
+5. Haz clic en **Aplicar**.
+
+---
+
+### 2.2 Creación y Configuración de VMs en VirtualBox 7.0
+
+Se utilizará la edición para servidores de Ubuntu para maximizar el rendimiento y prescindir de servicios gráficos innecesarios:
+
+* **Distribución:** Ubuntu Server 22.04.5 LTS (Jammy Jellyfish - 64 bits)
+* **Enlace de descarga oficial:**
+  ```text
+  https://releases.ubuntu.com/22.04/ubuntu-22.04.5-live-server-amd64.iso
+  ```
+
+Crea dos máquinas virtuales en la interfaz gráfica de VirtualBox con las siguientes especificaciones:
+
+#### Especificaciones para `k8s-master`:
+1. **Nombre:** `k8s-master` | **Tipo:** Linux | **Versión:** Ubuntu (64-bit)
+2. **Procesador:** Asignar **2 vCPUs** (mínimo estricto requerido por `kubeadm`).
+3. **Memoria Base:** Asignar **3072 MB** (3 GB).
+4. **Disco Duro:** Crear disco virtual VDI de **25 GB** (reservado dinámicamente).
+
+#### Especificaciones para `k8s-worker1`:
+1. **Nombre:** `k8s-worker1` | **Tipo:** Linux | **Versión:** Ubuntu (64-bit)
+2. **Procesador:** Asignar **2 vCPUs**.
+3. **Memoria Base:** Asignar **2048 MB** (2 GB).
+4. **Disco Duro:** Crear disco virtual VDI de **20 GB** (reservado dinámicamente).
+
+#### Configuración de Adaptadores de Red (Aplicar a Ambas VMs):
+1. **Adaptador 1:**
+   * Marcar: *Habilitar adaptador de red*
+   * Conectado a: **NAT** (utilizado para salida a Internet y descarga de paquetes).
+2. **Adaptador 2:**
+   * Marcar: *Habilitar adaptador de red*
+   * Conectado a: **Adaptador sólo-anfitrión (Host-Only)**
+   * Nombre: **`vboxnet0`** (la red creada en el paso 2.1 con rango `192.168.56.0/24`)
+   * Desplegar *Avanzadas* y establecer **Modo promiscuo:** **Permitir todo** (*Allow All*).
+
+> [!IMPORTANT]
+> **Si clonas la máquina master para crear el worker:** En la ventana de clonación, selecciona obligatoriamente la opción **"Generar nuevas direcciones MAC para todos los adaptadores de red"**. De lo contrario, ambas VMs tendrán interfaces de red idénticas y la comunicación fallará.
+
+---
+
+### 2.3 Configuración de Idioma y Teclado Español
+
+Por defecto, la instalación de Ubuntu Server se inicializa con la distribución de teclado en inglés (US). Esto genera múltiples errores de tipeo al introducir caracteres frecuentes de administración en consola como guiones (`-`), tuberías (`|`), barras (`/`), almohadillas (`#`) o comillas.
+
+Ejecuta en **ambos nodos (`k8s-master` y `k8s-worker1`)** nada más iniciar sesión:
+
+```bash
+# 1. Configurar la distribución de teclado a español pc105 de forma persistente
+sudo localectl set-x11-keymap es pc105
+
+# 2. Cargar el mapa de teclado en la consola actual de manera inmediata
+sudo loadkeys es
+```
+
+* `localectl set-x11-keymap es pc105`: Registra la distribución española en `/etc/default/keyboard` para que se aplique en todos los futuros reinicios del sistema.
+* `loadkeys es`: Aplica la tabla de teclas inmediatamente en la terminal TTY actual sin necesidad de reiniciar la sesión.
+
+---
+
+### 2.4 Persistencia de Red: Bloqueo de Cloud-Init y Netplan Estático
+
+En Ubuntu Server 22.04 LTS, el servicio de inicialización `cloud-init` gestiona la configuración de red y, por defecto, reescribe los archivos de Netplan al reiniciar el sistema. Si se modifica Netplan sin desactivar la generación de red de `cloud-init`, la dirección IP estática se perderá tras el primer reinicio.
+
+#### Paso 2.4.1: Crear archivo de bloqueo para cloud-init (Ambos Nodos)
+Ejecuta en `k8s-master` y `k8s-worker1`:
+
+```bash
+sudo touch /etc/cloud/cloud-init.disabled
+```
+
+La creación de este archivo deshabilita `cloud-init` por completo en el sistema operativo, evitando que interfiera o reescriba la configuración de red tras reiniciar.
+
+#### Paso 2.4.2: Configurar Netplan con IP Estática
+En Ubuntu Server, el archivo de configuración de red predeterminado se ubica en `/etc/netplan/50-cloud-init.yaml`.
+
+Edita el archivo en el nodo **`k8s-master`**:
+```bash
+sudo nano /etc/netplan/50-cloud-init.yaml
+```
+
+Añade la interfaz Host-Only `enp0s8` con la IP `192.168.56.10/24`:
+```yaml
+network:
+  ethernets:
+    enp0s3:
+      dhcp4: true
+      optional: true
+    enp0s8:
+      dhcp4: false
+      addresses:
+      - 192.168.56.10/24
+      optional: true
+  version: 2
+```
+
+Edita el archivo en el nodo **`k8s-worker1`**:
+```bash
+sudo nano /etc/netplan/50-cloud-init.yaml
+```
+
+Añade la interfaz Host-Only `enp0s8` con la IP `192.168.56.11/24`:
+```yaml
+network:
+  ethernets:
+    enp0s3:
+      dhcp4: true
+      optional: true
+    enp0s8:
+      dhcp4: false
+      addresses:
+      - 192.168.56.11/24
+      optional: true
+  version: 2
+```
+
+#### Paso 2.4.3: Aplicar los cambios de red
+En ambos nodos, aplica la configuración:
+```bash
+sudo netplan apply
+```
+
+#### Paso 2.4.4: Verificación con `ip a`
+Comprueba que la interfaz `enp0s8` tiene asignada la dirección IP correspondiente.
+
+Salida esperada en **`k8s-master`**:
+```text
+$ ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: enp0s3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 08:00:27:f9:da:df brd ff:ff:ff:ff:ff:ff
+    inet 10.0.2.15/24 metric 100 brd 10.0.2.255 scope global dynamic enp0s3
+       valid_lft 86121sec preferred_lft 86121sec
+    inet6 fe80::a00:27ff:fef9:dadf/64 scope link 
+       valid_lft forever preferred_lft forever
+3: enp0s8: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 08:00:27:a2:c7:8f brd ff:ff:ff:ff:ff:ff
+    inet 192.168.56.10/24 brd 192.168.56.255 scope global enp0s8
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a00:27ff:fea2:c78f/64 scope link 
+       valid_lft forever preferred_lft forever
+```
+
+Salida esperada en **`k8s-worker1`**:
+```text
+$ ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: enp0s3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 08:00:27:17:40:ea brd ff:ff:ff:ff:ff:ff
+    inet 10.0.2.15/24 metric 100 brd 10.0.2.255 scope global dynamic enp0s3
+       valid_lft 86242sec preferred_lft 86242sec
+    inet6 fe80::a00:27ff:fe17:40ea/64 scope link 
+       valid_lft forever preferred_lft forever
+3: enp0s8: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 08:00:27:34:ea:f7 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.56.11/24 brd 192.168.56.255 scope global enp0s8
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a00:27ff:fe34:eaf7/64 scope link 
+       valid_lft forever preferred_lft forever
+```
+
+#### Paso 2.4.5: Configuración de Hostname y Resolución Local
+En el nodo Master:
+```bash
+sudo hostnamectl set-hostname k8s-master
+```
+
+En el nodo Worker:
+```bash
+sudo hostnamectl set-hostname k8s-worker1
+```
+
+Añadir la resolución estática en `/etc/hosts` de ambas máquinas:
+```bash
+sudo bash -c 'cat >> /etc/hosts <<EOF
+192.168.56.10 k8s-master
+192.168.56.11 k8s-worker1
+EOF'
+```
+
+Prueba la conectividad bidireccional entre nodos:
+```bash
+ping -c 3 192.168.56.10
+ping -c 3 192.168.56.11
+```
+
+---
+
+### 2.5 Preparación Base del Sistema Operativo (SWAP, Kernel y Sysctl)
+
+Ejecuta los siguientes pasos en **cada una de las dos máquinas virtuales**.
+
+#### Desactivación Permanente de SWAP
+Kubernetes requiere que la memoria SWAP esté completamente inactiva para garantizar la gestión predecible de recursos en `kubelet`:
+
+```bash
+# Desactivar en la sesión actual
+sudo swapoff -a
+
+# Desactivar de forma permanente al reiniciar
+sudo sed -i '/^\/swap\.img/ s/^/#/' /etc/fstab
+
+# Verificación (debe devolver resultado vacío)
+swapon --show
+```
+
+#### Carga de Módulos de Kernel y Ajustes Sysctl
+Habilitar los módulos `overlay` y `br_netfilter` necesarios para el puenteo de red en los contenedores:
+
+```bash
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+```
+
+Configurar los parámetros de enrutamiento y filtrado de paquetes:
+```bash
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+
+sudo sysctl --system
+```
+
+---
+
+### 2.6 Instalación de Containerd y Dependencias del Sistema (`conntrack`, `socat`)
+
+Desde Kubernetes v1.24, el subsistema `dockershim` fue removido. Instalaremos `containerd` como runtime estándar de contenedores (CRI), junto con dos paquetes fundamentales del sistema operativo:
+
+* **`conntrack`**: Requerido por `kube-proxy` y `kubelet` para gestionar y monitorear las tablas de seguimiento de conexiones de `iptables`/`netfilter`. Sin `conntrack`, la asignación de IPs virtuales de servicio y balanceo de tráfico falla.
+* **`socat`**: Utilizado por el API Server de Kubernetes para canalizar flujos de entrada/salida y crear túneles bidireccionales, indispensables para el correcto funcionamiento de comandos como `kubectl exec` y `kubectl port-forward`.
+
+Ejecuta en **ambos nodos (`k8s-master` y `k8s-worker1`)**:
+
+```bash
+# 1. Instalar containerd y dependencias de red indispensables
+sudo apt-get update
+sudo apt-get install -y containerd conntrack socat
+
+# 2. Generar archivo de configuración inicial
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml > /dev/null
+
+# 3. Habilitar el controlador cgroup de systemd (indispensable para kubelet)
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
+
+# 4. Reiniciar y habilitar el servicio containerd
+sudo systemctl restart containerd
+sudo systemctl enable containerd
+
+# 5. Comprobación de estado activo
+sudo systemctl status containerd --no-pager
+```
+
+---
+
+### 2.7 Instalación de Herramientas Kubernetes (v1.31 en pkgs.k8s.io)
+
+Ejecuta en **ambos nodos**:
+
+```bash
+# 1. Instalar dependencias de transporte seguro
+sudo apt-get update
+sudo apt-get install -y apt-transport-https ca-certificates curl gpg
+
+# 2. Crear directorio de llaveros de confianza
+sudo mkdir -p -m 755 /etc/apt/keyrings
+
+# 3. Descargar y almacenar la clave pública oficial de Kubernetes v1.31
+K8S_REPO="https://pkgs.k8s.io/core:/stable:/v1.31/deb/"
+KEYRING="/etc/apt/keyrings/kubernetes-apt-keyring.gpg"
+
+curl -fsSL "${K8S_REPO}Release.key" \
+  | sudo gpg --dearmor -o "${KEYRING}"
+
+# 4. Registrar el repositorio comunitario oficial
+echo "deb [signed-by=${KEYRING}] ${K8S_REPO} /" \
+  | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+# 5. Instalar kubelet, kubeadm y kubectl
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+
+# 6. Bloquear actualizaciones automáticas para preservar estabilidad en versiones menores
+sudo apt-mark hold kubelet kubeadm kubectl
+```
+
+> [!NOTE] Solución de problemas: Error de validación de claves en `apt update` (Keyring obsoleto o clave no reconocida)
+> Si durante la instalación o actualización de paquetes con `apt` el repositorio no es reconocido por Ubuntu o se presentan errores con firmas de claves públicas (por ejemplo, errores de claves no válidas o ausentes en repositorios como HashiCorp preconfigurados en la imagen del sistema, p. ej. `NO_PUBKEY AA16FCBCA621E701`), la solución consiste en añadir la clave correspondiente al keyring (sin recurrir a `apt-key`, que se encuentra obsoleto):
+>
+> ```bash
+> gpg --no-default-keyring --keyring /tmp/hc-old.gpg --keyserver keyserver.ubuntu.com --recv-keys AA16FCBCA621E701
+> gpg --no-default-keyring --keyring /tmp/hc-old.gpg --export | sudo tee -a /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
+> sudo apt update
+> ```
+
+---
+
+### 2.8 Inicialización del Plano de Control (Master), Flannel CNI y Registros Reales
+
+Los pasos de esta subsección se ejecutan en **`k8s-master`**.
+
+#### Paso 2.8.1: Asegurar dependencias de red en el master
+Antes de inicializar el cluster, verifica e instala las dependencias de red necesarias (`conntrack` y `socat`):
+```bash
+sudo apt-get update && sudo apt-get install -y conntrack socat
+```
+
+#### Paso 2.8.2: Descarga previa de imágenes de control plane
+```bash
+sudo kubeadm config images pull
+```
+
+#### Paso 2.8.3: Inicialización del cluster con kubeadm
+Ejecuta `kubeadm init` indicando la IP de la red Host-Only como dirección de anuncio del API Server:
+
+```bash
+sudo kubeadm init \
+  --apiserver-advertise-address=192.168.56.10 \
+  --pod-network-cidr=10.244.0.0/16 \
+  --node-name k8s-master
+```
+
+#### Registro Real de Terminal (Benchmark de Inicialización):
+A continuación se muestra el registro de ejecución obtenido en el laboratorio, que sirve de referencia para validar el correcto progreso de la instalación:
+
+```text
+$ sudo kubeadm init --apiserver-advertise-address=192.168.56.10 --pod-network-cidr=10.244.0.0/16 --node-name k8s-master
+I1114 21:49:03.100458   15635 version.go:261] remote version is much newer: v1.37.2; falling back to: stable-1.31
+[init] Using Kubernetes version: v1.31.14
+[preflight] Running pre-flight checks
+[preflight] Pulling images required for setting up a Kubernetes cluster
+[preflight] This might take a minute or two, depending on the speed of your internet connection
+[preflight] You can also perform this action beforehand using 'kubeadm config images pull'
+W1114 21:49:03.258789   15635 checks.go:843] detected that the sandbox image "" of the container runtime is inconsistent with that used by kubeadm.It is recommended to use "registry.k8s.io/pause:3.10" as the CRI sandbox image.
+[certs] Using certificateDir folder "/etc/kubernetes/pki"
+[certs] Generating "ca" certificate and key
+[certs] Generating "apiserver" certificate and key
+[certs] apiserver serving cert is signed for DNS names [k8s-master kubernetes kubernetes.default kubernetes.default.svc kubernetes.default.svc.cluster.local] and IPs [10.96.0.1 192.168.56.10]
+[certs] Generating "apiserver-kubelet-client" certificate and key
+[certs] Generating "front-proxy-ca" certificate and key
+[certs] Generating "front-proxy-client" certificate and key
+[certs] Generating "etcd/ca" certificate and key
+[certs] Generating "etcd/server" certificate and key
+[certs] etcd/server serving cert is signed for DNS names [k8s-master localhost] and IPs [192.168.56.10 127.0.0.1 ::1]
+[certs] Generating "etcd/peer" certificate and key
+[certs] etcd/peer serving cert is signed for DNS names [k8s-master localhost] and IPs [192.168.56.10 127.0.0.1 ::1]
+[certs] Generating "etcd/healthcheck-client" certificate and key
+[certs] Generating "apiserver-etcd-client" certificate and key
+[certs] Generating "sa" key and public key
+[kubeconfig] Using kubeconfig folder "/etc/kubernetes"
+[kubeconfig] Writing "admin.conf" kubeconfig file
+[kubeconfig] Writing "super-admin.conf" kubeconfig file
+[kubeconfig] Writing "kubelet.conf" kubeconfig file
+[kubeconfig] Writing "controller-manager.conf" kubeconfig file
+[kubeconfig] Writing "scheduler.conf" kubeconfig file
+[etcd] Creating static Pod manifest for local etcd in "/etc/kubernetes/manifests"
+[control-plane] Using manifest folder "/etc/kubernetes/manifests"
+[control-plane] Creating static Pod manifest for "kube-apiserver"
+[control-plane] Creating static Pod manifest for "kube-controller-manager"
+[control-plane] Creating static Pod manifest for "kube-scheduler"
+[kubelet-start] Writing kubelet environment file with flags to file "/var/lib/kubelet/kubeadm-flags.env"
+[kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
+[kubelet-start] Starting the kubelet
+[wait-control-plane] Waiting for the kubelet to boot up the control plane as static Pods from directory "/etc/kubernetes/manifests"
+[kubelet-check] Waiting for a healthy kubelet at http://127.0.0.1:10248/healthz. This can take up to 4m0s
+[kubelet-check] The kubelet is healthy after 502.603826ms
+[api-check] Waiting for a healthy API server. This can take up to 4m0s
+[api-check] The API server is healthy after 5.502159471s
+[upload-config] Storing the configuration used in ConfigMap "kubeadm-config" in the "kube-system" Namespace
+[kubelet] Creating a ConfigMap "kubelet-config" in namespace kube-system with the configuration for the kubelets in the cluster
+[upload-certs] Skipping phase. Please see --upload-certs
+[mark-control-plane] Marking the node k8s-master as control-plane by adding the labels: [node-role.kubernetes.io/control-plane node.kubernetes.io/exclude-from-external-load-balancers]
+[mark-control-plane] Marking the node k8s-master as control-plane by adding the taints [node-role.kubernetes.io/control-plane:NoSchedule]
+[bootstrap-token] Using token: 5yjuf0.zo38v6ts77dd8zjc
+[bootstrap-token] Configuring bootstrap tokens, cluster-info ConfigMap, RBAC Roles
+[bootstrap-token] Configured RBAC rules to allow Node Bootstrap tokens to get nodes
+[bootstrap-token] Configured RBAC rules to allow Node Bootstrap tokens to post CSRs in order for nodes to get long term certificate credentials
+[bootstrap-token] Configured RBAC rules to allow the csrapprover controller automatically approve CSRs from a Node Bootstrap Token
+[bootstrap-token] Configured RBAC rules to allow certificate rotation for all node client certificates in the cluster
+[bootstrap-token] Creating the "cluster-info" ConfigMap in the "kube-public" namespace
+[kubelet-finalize] Updating "/etc/kubernetes/kubelet.conf" to point to a rotatable kubelet client certificate and key
+[addons] Applied essential addon: CoreDNS
+[addons] Applied essential addon: kube-proxy
+
+Your Kubernetes control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+
+  export KUBECONFIG=/etc/kubernetes/admin.conf
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+kubeadm join 192.168.56.10:6443 --token 5yjuf0.zo38v6ts77dd8zjc \
+	--discovery-token-ca-cert-hash sha256:3bf340abd39b6c6d30c33c163a9ceccc170567ea6f52f0007b59d3608f2a4e11
+```
+
+#### Paso 2.8.4: Configurar credenciales de kubectl para el usuario local
+```bash
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+
+#### Paso 2.8.5: Despliegue del Plugin de Red (Flannel CNI) con fijación de interfaz
+Descarga el manifiesto oficial de Flannel:
+```bash
+FLANNEL_URL="https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml"
+curl -sSL "${FLANNEL_URL}" -o kube-flannel.yml
+```
+
+En entornos VirtualBox con doble adaptador, Flannel seleccionará erróneamente la interfaz de NAT (`enp0s3`) si no se fuerza la interfaz Host-Only. Debemos añadir el argumento `--iface=enp0s8` en los argumentos del DaemonSet.
+
+Puedes realizar esta sustitución limpiamente con `sed`:
+```bash
+sed -i 's/- --kube-subnet-mgr/- --kube-subnet-mgr\n        - --iface=enp0s8/' kube-flannel.yml
+```
+
+*(Opcional: Si abres el archivo con `nano kube-flannel.yml`, comprueba visualmente que el bloque de argumentos del contenedor `kube-flannel` incluya `--iface=enp0s8`)*:
+```yaml
+      containers:
+      - name: kube-flannel
+        image: docker.io/flannel/flannel:...
+        command:
+        - /opt/bin/flanneld
+        args:
+        - --ip-masq
+        - --kube-subnet-mgr
+        - --iface=enp0s8
+```
+
+Aplica el manifiesto modificado:
+```bash
+kubectl apply -f kube-flannel.yml
+```
+
+Verifica el estado del nodo y pods del sistema:
+```bash
+kubectl get nodes
+kubectl get pods -n kube-system
+```
+*(En menos de un minuto, el nodo `k8s-master` cambiará su estado a `Ready`).*
+
+---
+
+### 2.9 Unión del Nodo Worker al Cluster con Dependencias y Registros Reales
+
+En la máquina virtual **`k8s-worker1`**:
+
+#### Paso 2.9.1: Asegurar dependencias de red en el worker
+Antes de ejecutar `kubeadm join`, corrobora que `conntrack` y `socat` están presentes:
+```bash
+sudo apt-get update && sudo apt-get install -y conntrack socat
+```
+
+#### Paso 2.9.2: Ejecución del comando `kubeadm join`
+Ejecuta como superusuario el comando devuelto por `kubeadm init` en el Master:
+
+```bash
+sudo kubeadm join 192.168.56.10:6443 \
+  --token <TU_TOKEN> \
+  --discovery-token-ca-cert-hash sha256:<TU_HASH>
+```
+
+#### Registro Real de Terminal (Benchmark de Unión):
+A continuación se muestra la salida de consola real obtenida en `k8s-worker1`:
+
+```text
+$ sudo kubeadm join 192.168.56.10:6443 --token 5yjuf0.zo38v6ts77dd8zjc  --discovery-token-ca-cert-hash sha256:3bf340abd39b6c6d30c33c163a9ceccc170567ea6f52f0007b59d3608f2a4e11
+[preflight] Running pre-flight checks
+[preflight] Reading configuration from the cluster...
+[preflight] FYI: You can look at this config file with 'kubectl -n kube-system get cm kubeadm-config -o yaml'
+[kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
+[kubelet-start] Writing kubelet environment file with flags to file "/var/lib/kubelet/kubeadm-flags.env"
+[kubelet-start] Starting the kubelet
+[kubelet-check] Waiting for a healthy kubelet at http://127.0.0.1:10248/healthz. This can take up to 4m0s
+[kubelet-check] The kubelet is healthy after 1.001529458s
+[kubelet-start] Waiting for the kubelet to perform the TLS Bootstrap
+
+This node has joined the cluster:
+* Certificate signing request was sent to apiserver and a response was received.
+* The Kubelet was informed of the new secure connection details.
+
+Run 'kubectl get nodes' on the control-plane to see this node join the cluster.
+```
+
+*(Si el token expiró tras 24 horas, puedes regenerar uno nuevo en el master mediante `sudo kubeadm token create --print-join-command`).*
+
+#### Paso 2.9.3: Validación del Cluster Completo desde el Master
+Regresa a la terminal de **`k8s-master`** y valida que ambos nodos reporten estado `Ready`:
+```bash
+kubectl get nodes -o wide
+```
+
+Salida esperada:
+```text
+NAME          STATUS   ROLES           AGE   VERSION    INTERNAL-IP     OS-IMAGE             KERNEL-VERSION       CONTAINER-RUNTIME
+k8s-master    Ready    control-plane   49m   v1.31.14   192.168.56.10   Ubuntu 22.04.5 LTS   5.15.0-203-generic   containerd://2.2.1
+k8s-worker1   Ready    <none>          21m   v1.31.14   192.168.56.11   Ubuntu 22.04.5 LTS   5.15.0-203-generic   containerd://2.2.1
+```
+
+---
+
+### 2.10 Conexión Remota No Destructiva desde el Host Anfitrión (Merge Kubeconfig)
+
+Permite controlar el cluster directamente desde la máquina host física (Ubuntu 20.04).
+
+> [!CAUTION]
+> **No sobrescribas tu archivo `~/.kube/config`:**
+> Si ya utilizas Kubernetes en tu equipo (ej. Minikube, Docker Desktop, k3s, EKS, GKE), ejecutar `scp ... ~/.kube/config` borrará tus clusters preexistentes. A continuación se detalla cómo fusionar la nueva configuración de forma segura y no destructiva.
+
+#### Paso 2.10.1: Instalar kubectl en el Host (si no lo tienes instalado)
+```bash
+sudo apt-get update && sudo apt-get install -y apt-transport-https ca-certificates curl gpg
+sudo mkdir -p -m 755 /etc/apt/keyrings
+
+K8S_REPO="https://pkgs.k8s.io/core:/stable:/v1.31/deb/"
+KEYRING="/etc/apt/keyrings/kubernetes-apt-keyring.gpg"
+
+curl -fsSL "${K8S_REPO}Release.key" | sudo gpg --dearmor --yes -o "${KEYRING}"
+echo "deb [signed-by=${KEYRING}] ${K8S_REPO} /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+sudo apt-get update && sudo apt-get install -y kubectl
+```
+
+#### Paso 2.10.2: Descargar el archivo kubeconfig del Master a un fichero local
+Descarga la configuración del master a un archivo temporal denominado `master-kubeconfig`:
+```bash
+mkdir -p ~/.kube
+scp <usuario>@192.168.56.10:~/.kube/config ./master-kubeconfig
+```
+
+#### Paso 2.10.3: Fusión (Merge) de Configuraciones
+Dispones de dos alternativas para integrar el cluster sin alterar los existentes:
+
+##### Alternativa A: Fusión Automática con kubectl (Recomendada)
+Si ya tienes un `~/.kube/config` existente:
+```bash
+# 1. Realizar copia de respaldo de seguridad
+cp ~/.kube/config ~/.kube/config.bak
+
+# 2. Fusionar ambos archivos en uno nuevo consolidado
+KUBECONFIG=~/.kube/config:./master-kubeconfig kubectl config view --flatten > ~/.kube/config.new
+
+# 3. Reemplazar y asegurar permisos
+mv ~/.kube/config.new ~/.kube/config
+chmod 600 ~/.kube/config
+rm -f ./master-kubeconfig
+```
+*(Si NO tenías un archivo `~/.kube/config` previo en el host, simplemente muévelo: `mv ./master-kubeconfig ~/.kube/config && chmod 600 ~/.kube/config`).*
+
+##### Alternativa B: Fusión Manual de Bloques YAML
+Abre `~/.kube/config` y `./master-kubeconfig` con tu editor. Copia y pega dentro de las secciones correspondientes:
+1. Bajo `clusters:`, añade la entrada del cluster `kubernetes` con la URL `https://192.168.56.10:6443`.
+2. Bajo `users:`, añade el usuario `kubernetes-admin`.
+3. Bajo `contexts:`, añade el contexto `kubernetes-admin@kubernetes` que vincula dicho usuario y cluster.
+
+#### Paso 2.10.4: Seleccionar el Contexto y Validar Acceso Remoto
+Fija el contexto activo hacia el nuevo cluster:
+```bash
+kubectl config use-context kubernetes-admin@kubernetes
+```
+
+Comprueba la conectividad remota desde la consola de tu host:
+```bash
+kubectl cluster-info
+kubectl get nodes -o wide
+```
+
+Salida real benchmark obtenida desde el host anfitrión:
+```text
+$ kubectl cluster-info
+Kubernetes control plane is running at https://192.168.56.10:6443
+CoreDNS is running at https://192.168.56.10:6443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+
+$ kubectl get nodes -o wide
+NAME          STATUS   ROLES           AGE   VERSION    INTERNAL-IP     EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION       CONTAINER-RUNTIME
+k8s-master    Ready    control-plane   49m   v1.31.14   192.168.56.10   <none>        Ubuntu 22.04.5 LTS   5.15.0-203-generic   containerd://2.2.1
+k8s-worker1   Ready    <none>          21m   v1.31.14   192.168.56.11   <none>        Ubuntu 22.04.5 LTS   5.15.0-203-generic   containerd://2.2.1
+```
+
+---
+
+### 2.11 Instalación y Acceso al Kubernetes Dashboard
+
+Desde la terminal donde tengas configurado `kubectl` (en el master o en tu host), despliega la interfaz gráfica oficial.
+
+#### Paso 2.11.1: Desplegar componentes de Dashboard
+```bash
+DASHBOARD_URL="https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml"
+kubectl apply -f "${DASHBOARD_URL}"
+```
+
+#### Paso 2.11.2: Crear Cuenta Administrativa y Rol (RBAC)
+Crea el archivo `dashboard-admin.yaml`:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kubernetes-dashboard
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kubernetes-dashboard
+```
+
+Aplica el manifiesto:
+```bash
+kubectl apply -f dashboard-admin.yaml
+```
+
+#### Paso 2.11.3: Generar Token de Acceso Bearer
+```bash
+kubectl -n kubernetes-dashboard create token admin-user
+```
+*(Copia el token extenso que se muestra por pantalla).*
+
+#### Paso 2.11.4: Acceso Web
+En el host físico, inicia el proxy de Kubernetes:
+```bash
+kubectl proxy
+```
+
+Abre el navegador web e ingresa en:
+```text
+http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
+```
+Selecciona la autenticación por **Token**, pega el token generado y entra al panel de administración.
+
+---
+
+## 3. Sección 2: Automatización Completa con Vagrant (IaC)
+
+Una vez que los alumnos dominan el proceso manual y los componentes internos, esta segunda sección les enseña a codificar todo el laboratorio como infraestructura como código (**Infrastructure as Code - IaC**) mediante Vagrant.
+
+### 3.1 Introducción a Vagrant para Kubernetes
+
+Vagrant permite describir la topología de máquinas virtuales, interfaces de red, asignación de memoria y scripts de ejecución en un único archivo de configuración (`Vagrantfile`). Con un solo comando (`vagrant up`), se descarga la imagen base, se crean las dos VMs en VirtualBox y se aprovisiona el cluster de forma 100% desatendida.
+
+---
+
+### 3.2 Estructura del Proyecto de Automatización
+
+El proyecto de automatización se organiza en la siguiente estructura de carpetas:
+
+```text
+poc-kubeadm-ubuntu/
+├── Vagrantfile                    # Definición de infraestructura y máquinas virtuales
+├── scripts/
+│   ├── common.sh                 # Aprovisionamiento común (SO, kernel, containerd, k8s)
+│   ├── master.sh                 # Inicialización de kubeadm, Flannel y exportación de token
+│   └── worker.sh                 # Espera activa y ejecución de kubeadm join
+└── configs/                       # Directorio compartido para token y kubeconfig
+```
+
+---
+
+### 3.3 El Archivo `Vagrantfile` Multi-Máquina
+
+El archivo `Vagrantfile` define de forma declarativa las dos máquinas virtuales con Ubuntu 22.04 LTS (`ubuntu/jammy64`) sobre el proveedor VirtualBox:
+
+```ruby
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  # Box base oficial de Ubuntu 22.04 LTS (Jammy Jellyfish)
+  config.vm.box = "ubuntu/jammy64"
+
+  # Carpeta compartida para intercambio seguro de tokens y kubeconfig
+  config.vm.synced_folder "./configs", "/vagrant_configs", create: true
+
+  # =========================================================================
+  # 1. NODO MASTER (Control Plane)
+  # =========================================================================
+  config.vm.define "k8s-master" do |master|
+    master.vm.hostname = "k8s-master"
+    master.vm.network "private_network", ip: "192.168.56.10"
+
+    master.vm.provider "virtualbox" do |vb|
+      vb.name = "k8s-master"
+      vb.cpus = 2
+      vb.memory = 3072
+      vb.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
+    end
+
+    # Aprovisionamiento: Primero configuración común, luego inicialización master
+    master.vm.provision "shell", path: "scripts/common.sh"
+    master.vm.provision "shell", path: "scripts/master.sh"
+  end
+
+  # =========================================================================
+  # 2. NODO WORKER
+  # =========================================================================
+  config.vm.define "k8s-worker1" do |worker|
+    worker.vm.hostname = "k8s-worker1"
+    worker.vm.network "private_network", ip: "192.168.56.11"
+
+    worker.vm.provider "virtualbox" do |vb|
+      vb.name = "k8s-worker1"
+      vb.cpus = 2
+      vb.memory = 2048
+      vb.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
+    end
+
+    # Aprovisionamiento: Configuración común y unión automatizada al cluster
+    worker.vm.provision "shell", path: "scripts/common.sh"
+    worker.vm.provision "shell", path: "scripts/worker.sh"
+  end
+end
+```
+
+---
+
+### 3.4 Scripts Shell de Aprovisionamiento Modular
+
+#### 3.4.1 Script Común (`scripts/common.sh`)
+Se ejecuta en cada VM para preparar el sistema operativo, módulos de kernel, containerd y paquetes de Kubernetes:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+echo "==> [COMMON] Configurando resolución de nombres en /etc/hosts..."
+cat <<EOF >> /etc/hosts
+192.168.56.10 k8s-master
+192.168.56.11 k8s-worker1
+EOF
+
+echo "==> [COMMON] Desactivando memoria SWAP..."
+swapoff -a
+sed -i '/^\/swap\.img/ s/^/#/' /etc/fstab
+
+echo "==> [COMMON] Cargando módulos de kernel..."
+cat <<EOF > /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+modprobe overlay
+modprobe br_netfilter
+
+echo "==> [COMMON] Configurando parámetros sysctl..."
+cat <<EOF > /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+sysctl --system > /dev/null
+
+echo "==> [COMMON] Instalando y configurando Containerd..."
+apt-get update -y > /dev/null
+apt-get install -y containerd apt-transport-https ca-certificates curl gpg > /dev/null
+
+mkdir -p /etc/containerd
+containerd config default > /etc/containerd/config.toml
+sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
+systemctl restart containerd
+systemctl enable containerd > /dev/null
+
+echo "==> [COMMON] Configurando repositorios de Kubernetes v1.31 (pkgs.k8s.io)..."
+K8S_REPO="https://pkgs.k8s.io/core:/stable:/v1.31/deb/"
+KEYRING="/etc/apt/keyrings/kubernetes-apt-keyring.gpg"
+mkdir -p -m 755 /etc/apt/keyrings
+curl -fsSL "${K8S_REPO}Release.key" | gpg --dearmor --yes -o "${KEYRING}"
+echo "deb [signed-by=${KEYRING}] ${K8S_REPO} /" > /etc/apt/sources.list.d/kubernetes.list
+
+apt-get update -y > /dev/null
+apt-get install -y kubelet kubeadm kubectl > /dev/null
+apt-mark hold kubelet kubeadm kubectl
+```
+
+#### 3.4.2 Script del Master (`scripts/master.sh`)
+Inicializa el cluster, configura Flannel fijando la interfaz `enp0s8`, exporta el kubeconfig y genera el comando de unión en la carpeta compartida:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+MASTER_IP="192.168.56.10"
+POD_CIDR="10.244.0.0/16"
+
+echo "==> [MASTER] Inicializando cluster de Kubernetes con kubeadm init..."
+kubeadm init \
+  --apiserver-advertise-address="${MASTER_IP}" \
+  --pod-network-cidr="${POD_CIDR}" \
+  --node-name k8s-master > /dev/null
+
+echo "==> [MASTER] Configurando kubeconfig para el usuario vagrant..."
+mkdir -p /home/vagrant/.kube
+cp -i /etc/kubernetes/admin.conf /home/vagrant/.kube/config
+chown vagrant:vagrant /home/vagrant/.kube/config
+
+echo "==> [MASTER] Exportando kubeconfig al directorio compartido..."
+cp -i /etc/kubernetes/admin.conf /vagrant_configs/config
+chmod 644 /vagrant_configs/config
+
+echo "==> [MASTER] Desplegando Flannel CNI con enlace forzado a la interfaz enp0s8..."
+FLANNEL_URL="https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml"
+curl -sSL "${FLANNEL_URL}" -o /tmp/kube-flannel.yml
+sed -i 's/- --kube-subnet-mgr/- --kube-subnet-mgr\n        - --iface=enp0s8/' /tmp/kube-flannel.yml
+kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f /tmp/kube-flannel.yml > /dev/null
+
+echo "==> [MASTER] Generando comando kubeadm join desatendido..."
+kubeadm token create --print-join-command > /vagrant_configs/join.sh
+chmod +x /vagrant_configs/join.sh
+
+echo "==> [MASTER] Plano de control listo y operativo."
+```
+
+#### 3.4.3 Script del Worker (`scripts/worker.sh`)
+Espera de forma activa a que el Master complete la inicialización y genera el token de unión para ejecutar `kubeadm join`:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+echo "==> [WORKER] Esperando a que el nodo Master genere el token de unión..."
+while [ ! -f /vagrant_configs/join.sh ]; do
+  sleep 3
+done
+
+echo "==> [WORKER] Ejecutando comando de unión al cluster..."
+bash /vagrant_configs/join.sh > /dev/null
+
+echo "==> [WORKER] Nodo incorporado con éxito al cluster."
+```
+
+---
+
+### 3.5 Despliegue Desatendido con `vagrant up`
+
+Para que el alumno levante todo el laboratorio automatizado en su equipo:
+
+1. **Instalar Vagrant y VirtualBox en el Host (Ubuntu 20.04):**
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y virtualbox vagrant
+   ```
+
+2. **Iniciar el cluster:**
+   ```bash
+   cd poc-kubeadm-ubuntu
+   vagrant up
+   ```
+   *(Vagrant levantará primero `k8s-master`, aprovisionará el control plane y Flannel, guardará el token en `configs/join.sh`, y luego levantará `k8s-worker1` uniéndolo automáticamente).*
+
+3. **Verificar el estado desde el Host con kubectl:**
+   ```bash
+   export KUBECONFIG=$(pwd)/configs/config
+   kubectl get nodes -o wide
+   ```
+
+---
+
+### 3.6 Gestión del Ciclo de Vida del Cluster
+
+Comandos esenciales de Vagrant para los alumnos:
+
+* **Comprobar estado de las VMs:**
+  ```bash
+  vagrant status
+  ```
+* **Acceder por SSH a cualquiera de los nodos:**
+  ```bash
+  vagrant ssh k8s-master
+  vagrant ssh k8s-worker1
+  ```
+* **Detener temporalmente el laboratorio (ahorro de batería/RAM):**
+  ```bash
+  vagrant halt
+  ```
+* **Reanudar el laboratorio:**
+  ```bash
+  vagrant up
+  ```
+* **Destruir completamente el laboratorio para empezar de cero:**
+  ```bash
+  vagrant destroy -f
+  ```
+
+---
+
+## 4. Resolución de Problemas Frecuentes (Troubleshooting)
+
+### Error 1: "The connection to the server 10.0.2.15:6443 was refused"
+* **Causa:** No se configuró `--apiserver-advertise-address=192.168.56.10` al ejecutar `kubeadm init`, y el apiserver intentó anunciarse con la IP NAT compartida.
+* **Solución:** Reiniciar la configuración con `sudo kubeadm reset -f` y volver a inicializar especificando explícitamente `--apiserver-advertise-address=192.168.56.10`.
+
+### Error 2: "CoreDNS se queda indefinidamente en estado ContainerCreating o Pending"
+* **Causa:** El plugin de red (CNI) no ha sido instalado o se ha vinculado a la tarjeta errónea.
+* **Solución:** Aplicar el CNI Flannel con el parámetro `--iface=enp0s8`. Comprobar con `kubectl get pods -n kube-system -l k8s-app=flannel`.
+
+### Error 3: "kubelet fails with cgroup driver mismatch"
+* **Causa:** `containerd` se instaló sin configurar `SystemdCgroup = true` en `/etc/containerd/config.toml`.
+* **Solución:** Modificar la directiva a `SystemdCgroup = true` y reiniciar el servicio con `sudo systemctl restart containerd && sudo systemctl restart kubelet`.
+
+### Error 4: "Worker node not found or cannot connect to master:6443"
+* **Causa:** Cortafuegos activo en el master bloqueando el puerto 6443 o IP de Host-Only no alcanzable.
+* **Solución:** En el master, verificar `sudo ufw status` (debe estar inactivo o permitir el puerto 6443: `sudo ufw allow 6443/tcp`) y hacer ping a `192.168.56.10` desde el worker.
