@@ -1331,6 +1331,48 @@ eyJhbGciOiJSUzI1NiIsImtpZCI6IlUyUEhfRVVUckc1M0tfcWstRkFUd1E0ek9aMkluejhkc0FaVmJE
 > [!NOTE]
 > Copia íntegramente la cadena alfanumérica resultante en el portapapeles; será el secreto necesario para identificarte en el panel.
 
+#### Opción Alternativa: Generación de Token Permanente (Sin Expiración)
+
+Por defecto, los tokens generados con `kubectl create token` caducan automáticamente tras 1 hora. Si deseas evitar tener que solicitar y pegar un nuevo token en cada sesión de trabajo, puedes crear un token permanente declarativo asociando un objeto `Secret` al ServiceAccount `admin-user`.
+
+1. Crea el archivo `admin-user-secret.yaml`:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: admin-user-secret
+  namespace: kubernetes-dashboard
+  annotations:
+    kubernetes.io/service-account.name: "admin-user"
+type: kubernetes.io/service-account-token
+```
+
+El tipo `kubernetes.io/service-account-token` le indica al plano de control de Kubernetes que genere de forma automática un token persistente y lo almacene en el secreto.
+
+2. Aplica el manifiesto en el cluster:
+
+```bash
+kubectl apply -f admin-user-secret.yaml
+```
+
+**Salida en consola:**
+```text
+secret/admin-user-secret created
+```
+
+3. Extrae y decodifica el token permanente en Base64:
+
+```bash
+kubectl get secret admin-user-secret -n kubernetes-dashboard -o jsonpath={".data.token"} | base64 -d
+```
+
+Este comando imprimirá directamente el token JWT no expirable. Puedes guardarlo de forma segura en un gestor de contraseñas local; permanecerá válido indefinidamente para iniciar sesión en el Dashboard mientras no se elimine el secreto `admin-user-secret`.
+
+> [!WARNING]
+> **Consideración de Seguridad Crítica:**
+> Los tokens permanentes **no son seguros para su uso en entornos de producción**, ya que vulneran el principio de menor privilegio al carecer de caducidad y rotación automática. Si una credencial estática de superadministrador (`cluster-admin`) se filtra, el cluster queda permanentemente comprometido hasta su revocación manual. Sin embargo, para esta prueba local de laboratorio y entornos de aprendizaje, su uso es plenamente válido por comodidad.
+
 ---
 
 ### 4.6 Acceso Seguro mediante Kubectl Proxy

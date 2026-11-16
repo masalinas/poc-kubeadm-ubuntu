@@ -54,7 +54,7 @@ The system SHALL detail worker node join procedure with cluster tokens and expor
 - **THEN** `kubectl get nodes` ejecutado desde el host Ubuntu 20.04 muestra ambos nodos k8s-master y k8s-worker1 en estado Ready.
 
 ### Requirement: Despliegue y Acceso al Dashboard de Kubernetes
-The system SHALL guide Kubernetes Dashboard deployment, pod health verification, administrative service account creation with cluster-admin binding, token generation, secure proxy access, and visual verification with interface screenshots.
+The system SHALL guide Kubernetes Dashboard deployment, pod health verification, administrative service account creation with cluster-admin binding, token generation (both time-limited and permanent via Secret with security warnings), secure proxy access, and visual verification with interface screenshots.
 
 #### Scenario: Despliegue y verificación de componentes del Dashboard
 - **WHEN** el alumno aplica el manifiesto oficial del Dashboard con `kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml`
@@ -67,3 +67,7 @@ The system SHALL guide Kubernetes Dashboard deployment, pod health verification,
 #### Scenario: Acceso web al Dashboard
 - **WHEN** el alumno genera el token de autenticación con `kubectl -n kubernetes-dashboard create token admin-user`, ejecuta `kubectl proxy` y navega a la URL del proxy
 - **THEN** la guía documenta el acceso por token, ilustra la pantalla de autenticación con `k8s_dashboard_login.png` y muestra la interfaz gráfica interna con los recursos del namespace mediante `k8s_dashboard.png`.
+
+#### Scenario: Generación de token permanente no expirable mediante Secret
+- **WHEN** el alumno crea el manifiesto `admin-user-secret.yaml` de tipo `kubernetes.io/service-account-token` vinculado a `admin-user`, lo aplica y extrae el token decodificado en Base64
+- **THEN** la guía documenta la obtención de un token persistente sin expiración para pruebas locales y laboratorios, e incorpora una advertencia de seguridad explícita desaconsejando esta práctica en entornos productivos.

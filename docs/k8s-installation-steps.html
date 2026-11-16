@@ -1802,6 +1802,40 @@ admin-user   0         38s</code></pre>
     Copia íntegramente la cadena alfanumérica resultante en el portapapeles; será el secreto necesario para identificarte en el panel.
   </div>
 
+  <h4>Opción Alternativa: Generación de Token Permanente (Sin Expiración)</h4>
+  <p>
+    Por defecto, los tokens generados con <code>kubectl create token</code> caducan automáticamente tras 1 hora. Si deseas evitar tener que solicitar y pegar un nuevo token en cada sesión de trabajo, puedes crear un token permanente declarativo asociando un objeto <code>Secret</code> al ServiceAccount <code>admin-user</code>.
+  </p>
+
+  <p>1. Crea el archivo <code>admin-user-secret.yaml</code>:</p>
+  <pre><code>apiVersion: v1
+kind: Secret
+metadata:
+  name: admin-user-secret
+  namespace: kubernetes-dashboard
+  annotations:
+    kubernetes.io/service-account.name: "admin-user"
+type: kubernetes.io/service-account-token</code></pre>
+  <p>
+    El tipo <code>kubernetes.io/service-account-token</code> le indica al plano de control de Kubernetes que genere de forma automática un token persistente y lo almacene en el secreto.
+  </p>
+
+  <p>2. Aplica el manifiesto en el cluster:</p>
+  <pre><code>kubectl apply -f admin-user-secret.yaml</code></pre>
+  <p><strong>Salida en consola:</strong></p>
+  <pre><code>secret/admin-user-secret created</code></pre>
+
+  <p>3. Extrae y decodifica el token permanente en Base64:</p>
+  <pre><code>kubectl get secret admin-user-secret -n kubernetes-dashboard -o jsonpath={".data.token"} | base64 -d</code></pre>
+  <p>
+    Este comando imprimirá directamente el token JWT no expirable. Puedes guardarlo de forma segura en un gestor de contraseñas local; permanecerá válido indefinidamente para iniciar sesión en el Dashboard mientras no se elimine el secreto <code>admin-user-secret</code>.
+  </p>
+
+  <div class="alert alert-warning">
+    <div class="alert-title">Consideración de Seguridad Crítica: Token Permanente vs Producción</div>
+    Los tokens permanentes <strong>no son seguros para su uso en entornos de producción</strong>, ya que vulneran el principio de menor privilegio al carecer de caducidad y rotación automática. Si una credencial estática de superadministrador (<code>cluster-admin</code>) se filtra, el cluster queda permanentemente comprometido hasta su revocación manual. Sin embargo, para esta prueba local de laboratorio y entornos de aprendizaje, su uso es plenamente válido por comodidad.
+  </div>
+
   <h3>4.6 Acceso Seguro mediante Kubectl Proxy</h3>
   <p>
     Para conectarse de forma segura desde el equipo anfitrión físico sin exponer el Dashboard directamente a redes externas no cifradas, iniciamos el túnel local de <code>kubectl proxy</code>:
