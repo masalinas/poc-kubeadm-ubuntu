@@ -281,6 +281,31 @@
       text-align: left;
     }
 
+    /* Figuras e Imágenes */
+    .dashboard-figure {
+      margin: 16px 0 20px 0;
+      text-align: center;
+      page-break-inside: avoid;
+    }
+
+    .dashboard-figure img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+      display: block;
+      margin: 0 auto;
+    }
+
+    .figure-caption {
+      margin-top: 8px;
+      font-size: 8.5pt;
+      color: #64748b;
+      font-style: italic;
+      text-align: center;
+    }
+
     th {
       background-color: #1e293b;
       color: #ffffff;
@@ -426,7 +451,6 @@
           <li class="toc-subitem">2.8 Inicialización del Plano de Control (Master), Flannel CNI y Registros Reales</li>
           <li class="toc-subitem">2.9 Unión del Nodo Worker al Cluster con Dependencias y Registros Reales</li>
           <li class="toc-subitem">2.10 Conexión Remota No Destructiva desde el Host Anfitrión (Merge Kubeconfig)</li>
-          <li class="toc-subitem">2.11 Instalación y Acceso al Kubernetes Dashboard</li>
         </ul>
       </li>
       <li class="toc-item">3. Sección 2: Automatización Completa con Vagrant (IaC)
@@ -439,16 +463,27 @@
           <li class="toc-subitem">3.6 Ciclo de Vida del Laboratorio (status, halt, ssh, destroy)</li>
         </ul>
       </li>
-      <li class="toc-item">4. Sección 3: Ejemplo Práctico de Despliegue en el Cluster (Nginx)
+      <li class="toc-item">4. Sección 3: Instalación, Acceso y Verificación Gráfica del Kubernetes Dashboard
         <ul class="toc-sublist">
-          <li class="toc-subitem">4.1 Creación del Deployment de Nginx</li>
-          <li class="toc-subitem">4.2 Inspección Detallada de Recursos del Cluster</li>
-          <li class="toc-subitem">4.3 Exposición Externa mediante Servicio NodePort</li>
-          <li class="toc-subitem">4.4 Verificación de Conectividad HTTP y Acceso Externo</li>
-          <li class="toc-subitem">4.5 Acceso Temporal mediante Port-Forward y Limpieza de Recursos</li>
+          <li class="toc-subitem">4.1 Despliegue de los Componentes Oficiales del Dashboard</li>
+          <li class="toc-subitem">4.2 Verificación del Estado de los Pods del Dashboard</li>
+          <li class="toc-subitem">4.3 Creación de Cuenta de Servicio y Privilegios Administrativos (RBAC)</li>
+          <li class="toc-subitem">4.4 Comprobación de la Cuenta de Servicio Creada</li>
+          <li class="toc-subitem">4.5 Generación del Token de Autenticación Bearer</li>
+          <li class="toc-subitem">4.6 Acceso Seguro mediante Kubectl Proxy</li>
+          <li class="toc-subitem">4.7 Inicio de Sesión y Verificación Visual del Panel</li>
         </ul>
       </li>
-      <li class="toc-item">5. Resolución de Problemas Frecuentes (Troubleshooting)</li>
+      <li class="toc-item">5. Sección 4: Ejemplo Práctico de Despliegue en el Cluster (Nginx)
+        <ul class="toc-sublist">
+          <li class="toc-subitem">5.1 Creación del Deployment de Nginx</li>
+          <li class="toc-subitem">5.2 Inspección Detallada de Recursos del Cluster</li>
+          <li class="toc-subitem">5.3 Exposición Externa mediante Servicio NodePort</li>
+          <li class="toc-subitem">5.4 Verificación de Conectividad HTTP y Acceso Externo</li>
+          <li class="toc-subitem">5.5 Acceso Temporal mediante Port-Forward y Limpieza de Recursos</li>
+        </ul>
+      </li>
+      <li class="toc-item">6. Resolución de Problemas Frecuentes (Troubleshooting)</li>
     </ul>
   </div>
 
@@ -1002,41 +1037,6 @@ NAME          STATUS   ROLES           AGE   VERSION    INTERNAL-IP     EXTERNAL
 k8s-master    Ready    control-plane   49m   v1.31.14   192.168.56.10   &lt;none&gt;        Ubuntu 22.04.5 LTS   5.15.0-203-generic   containerd://2.2.1
 k8s-worker1   Ready    &lt;none&gt;          21m   v1.31.14   192.168.56.11   &lt;none&gt;        Ubuntu 22.04.5 LTS   5.15.0-203-generic   containerd://2.2.1</code></pre>
 
-  <h3>2.11 Instalación y Acceso al Kubernetes Dashboard</h3>
-  <pre><code># 1. Desplegar Dashboard oficial
-DASHBOARD_URL="https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml"
-kubectl apply -f "${DASHBOARD_URL}"
-
-# 2. Crear cuenta de administración RBAC
-cat &lt;&lt;EOF | kubectl apply -f -
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: admin-user
-  namespace: kubernetes-dashboard
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: admin-user
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- kind: ServiceAccount
-  name: admin-user
-  namespace: kubernetes-dashboard
-EOF
-
-# 3. Generar token de sesión Bearer
-kubectl -n kubernetes-dashboard create token admin-user
-
-# 4. Iniciar proxy desde el host
-kubectl proxy</code></pre>
-  <p>Acceder desde el navegador del host a la URL:</p>
-  <pre><code>http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/</code></pre>
-
   <!-- SECCIÓN 2: VAGRANT -->
   <div class="page-break"></div>
   <div class="section-banner">
@@ -1242,14 +1242,135 @@ kubectl get nodes -o wide</code></pre>
     </tbody>
   </table>
 
-  <!-- SECCIÓN 3: EJEMPLO DE DESPLIEGUE -->
+  <!-- SECCIÓN 3: KUBERNETES DASHBOARD -->
   <div class="page-break"></div>
   <div class="section-banner">
-    <h2>4. Sección 3: Ejemplo Práctico de Despliegue en el Cluster (Nginx)</h2>
+    <h2>4. Sección 3: Instalación, Acceso y Verificación Gráfica del Kubernetes Dashboard</h2>
+    <p>Objetivo pedagógico: Desplegar y acceder a la interfaz gráfica oficial del cluster, validando permisos RBAC y monitorización visual.</p>
+  </div>
+
+  <p>
+    Para monitorizar y gestionar visualmente los recursos del cluster sin depender exclusivamente de la línea de comandos, desplegamos la interfaz gráfica oficial: el <strong>Kubernetes Dashboard</strong>. A continuación se detalla el procedimiento completo, incluyendo la verificación de estado de los pods, la creación declarativa de la cuenta administrativa RBAC, la obtención del token Bearer y las capturas visuales de la interfaz.
+  </p>
+
+  <h3>4.1 Despliegue de los Componentes Oficiales del Dashboard</h3>
+  <p>
+    Aplica el manifiesto recomendado oficial de Kubernetes (versión v2.7.0), el cual genera el namespace dedicado <code>kubernetes-dashboard</code>, las cuentas de servicio, certificados autofirmados, roles RBAC y los deployments de la interfaz y del recolector de métricas:
+  </p>
+  <pre><code>kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml</code></pre>
+  <p><strong>Salida real de terminal:</strong></p>
+  <pre><code>namespace/kubernetes-dashboard created
+serviceaccount/kubernetes-dashboard created
+service/kubernetes-dashboard created
+secret/kubernetes-dashboard-certs created
+secret/kubernetes-dashboard-csrf created
+secret/kubernetes-dashboard-key-holder created
+configmap/kubernetes-dashboard-settings created
+role.rbac.authorization.k8s.io/kubernetes-dashboard created
+clusterrole.rbac.authorization.k8s.io/kubernetes-dashboard created
+rolebinding.rbac.authorization.k8s.io/kubernetes-dashboard created
+clusterrolebinding.rbac.authorization.k8s.io/kubernetes-dashboard created
+deployment.apps/kubernetes-dashboard created
+service/dashboard-metrics-scraper created
+deployment.apps/dashboard-metrics-scraper created</code></pre>
+
+  <h3>4.2 Verificación del Estado de los Pods del Dashboard</h3>
+  <p>
+    Antes de intentar acceder, comprobamos que tanto el pod principal del Dashboard como el pod auxiliar <code>dashboard-metrics-scraper</code> hayan descargado sus imágenes y alcancen el estado <code>Running</code>:
+  </p>
+  <pre><code>kubectl get pods -n kubernetes-dashboard</code></pre>
+  <p><strong>Salida real de terminal:</strong></p>
+  <pre><code>NAME                                         READY   STATUS    RESTARTS   AGE
+dashboard-metrics-scraper-6b96ff7878-2xhlz   1/1     Running   0          31s
+kubernetes-dashboard-8696f5f494-hxd9c        1/1     Running   0          31s</code></pre>
+
+  <h3>4.3 Creación de Cuenta de Servicio y Privilegios Administrativos (RBAC)</h3>
+  <p>
+    Por defecto, el Dashboard se despliega con permisos mínimos restringidos. Para administrar y visualizar todos los namespaces y cargas de trabajo del cluster, creamos un usuario de servicio (<code>ServiceAccount</code>) con rol de superusuario (<code>cluster-admin</code>).
+  </p>
+  <p>Crea el archivo <code>dashboard-adminuser.yaml</code>:</p>
+  <pre><code>apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kubernetes-dashboard
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kubernetes-dashboard</code></pre>
+
+  <p>Aplica este manifiesto en el cluster:</p>
+  <pre><code>kubectl apply -f dashboard-adminuser.yaml</code></pre>
+  <p><strong>Salida real de terminal:</strong></p>
+  <pre><code>serviceaccount/admin-user created
+clusterrolebinding.rbac.authorization.k8s.io/admin-user created</code></pre>
+
+  <h3>4.4 Comprobación de la Cuenta de Servicio Creada</h3>
+  <p>Verificamos que el objeto <code>ServiceAccount</code> existe correctamente registrado en el namespace <code>kubernetes-dashboard</code>:</p>
+  <pre><code>kubectl get serviceaccount admin-user -n kubernetes-dashboard</code></pre>
+  <p><strong>Salida real de terminal:</strong></p>
+  <pre><code>NAME         SECRETS   AGE
+admin-user   0         38s</code></pre>
+
+  <h3>4.5 Generación del Token de Autenticación Bearer</h3>
+  <p>
+    En Kubernetes moderno (v1.24+ y v1.31), los tokens de ServiceAccount ya no se generan indefinidamente en secrets por defecto, sino que se solicitan mediante la API de tokens temporales de <code>kubectl</code>:
+  </p>
+  <pre><code>kubectl -n kubernetes-dashboard create token admin-user</code></pre>
+  <p><strong>Salida real de terminal:</strong></p>
+  <pre><code>eyJhbGciOiJSUzI1NiIsImtpZCI6IlUyUEhfRVVUckc1M0tfcWstRkFUd1E0ek9aMkluejhkc0FaVmJEOEo4SWcifQ.eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWwiXSwiZXhwIjoxNzk0ODM1NDkyLCJpYXQiOjE3OTQ4MzE4OTIsImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsIiwianRpIjoiNzYwODdjOWEtMTQ1ZS00ZWNhLTliMzItMjFlYjM0ZjhiZjIwIiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsInNlcnZpY2VhY2NvdW50Ijp7Im5hbWUiOiJhZG1pbi11c2VyIiwidWlkIjoiN2ViY2M0YTAtYjk1MC00M2Q0LTg3OTYtMjI3NTNlNmEyODA3In19LCJuYmYiOjE3OTQ4MzE4OTIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDprdWJlcm5ldGVzLWRhc2hib2FyZDphZG1pbi11c2VyIn0.Geq8LpwDCPqfYDGIfwjnnh8HClQKBLPscWoJ5AgekxMJGLKnXT878KleThDbFtHF5LDxB_DRod8H7yIXpUoimEOXdex0bYGj5jXT-Qt6T734BDh21ppavtrP4CmAJW_feyEcsFzGuXQ4qlmEOheSGRhePKIEahBnI05sqm9B1a90indvH4rx_qxAWrpxsY-QVyZcjjZXHr9DLcD3FEmpKz8wVFUsw-EaQ7SV3k39gBImBDO9Tk-dJwBiU5VNwYYXuCuGsaX7UxfFor-2fMp3CR-oX1Z1_huGWI7ynYKpRwy-49BnqrMmThjPUMImBL7jBFkURr_erazpiQcj0CziQ</code></pre>
+
+  <div class="alert alert-note">
+    <div class="alert-title">Nota sobre el Token Bearer</div>
+    Copia íntegramente la cadena alfanumérica resultante en el portapapeles; será el secreto necesario para identificarte en el panel.
+  </div>
+
+  <h3>4.6 Acceso Seguro mediante Kubectl Proxy</h3>
+  <p>
+    Para conectarse de forma segura desde el equipo anfitrión físico sin exponer el Dashboard directamente a redes externas no cifradas, iniciamos el túnel local de <code>kubectl proxy</code>:
+  </p>
+  <pre><code>kubectl proxy</code></pre>
+  <p><strong>Salida en consola:</strong></p>
+  <pre><code>Starting to serve on 127.0.0.1:8001</code></pre>
+  <p>
+    Manteniendo este proceso en ejecución, abre tu navegador web e introduce la siguiente URL exacta:
+  </p>
+  <pre><code>http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/</code></pre>
+
+  <h3>4.7 Inicio de Sesión y Verificación Visual del Panel</h3>
+  <p>
+    Al acceder a la URL indicada, el Dashboard presenta la pantalla de autenticación. Selecciona la opción <strong>Token</strong>, pega el token generado en el paso 4.5 y pulsa sobre <strong>Sign in</strong>:
+  </p>
+  <figure class="dashboard-figure">
+    <img src="images/k8s_dashboard_login.png" alt="Pantalla de inicio de sesión de Kubernetes Dashboard">
+    <figcaption class="figure-caption">Figura 3.1: Pantalla de inicio de sesión de Kubernetes Dashboard solicitando autenticación mediante Token.</figcaption>
+  </figure>
+
+  <p>
+    Una vez autenticado como <code>admin-user</code>, se despliega el panel de control completo. En el selector superior de namespaces seleccionamos <code>kubernetes-dashboard</code> para confirmar que los pods, deployments y servicios recién creados se encuentran en estado saludable:
+  </p>
+  <figure class="dashboard-figure">
+    <img src="images/k8s_dashboard.png" alt="Vista interna del Kubernetes Dashboard con los recursos del namespace">
+    <figcaption class="figure-caption">Figura 3.2: Interfaz web de Kubernetes Dashboard mostrando el estado de los recursos y pods del namespace kubernetes-dashboard.</figcaption>
+  </figure>
+
+  <!-- SECCIÓN 4: EJEMPLO DE DESPLIEGUE -->
+  <div class="page-break"></div>
+  <div class="section-banner">
+    <h2>5. Sección 4: Ejemplo Práctico de Despliegue en el Cluster (Nginx)</h2>
     <p>Objetivo pedagógico: Validar la operatividad del cluster desplegando una carga de trabajo, exponiéndola vía NodePort y verificando tráfico HTTP.</p>
   </div>
 
-  <h3>4.1 Creación del Deployment de Nginx</h3>
+  <h3>5.1 Creación del Deployment de Nginx</h3>
   <p>
     Desplegamos un servidor web Nginx básico en el cluster utilizando un objeto de tipo <code>Deployment</code> en el namespace <code>default</code>:
   </p>
@@ -1257,7 +1378,7 @@ kubectl get nodes -o wide</code></pre>
   <p><strong>Salida real del comando:</strong></p>
   <pre><code>deployment.apps/nginx-test created</code></pre>
 
-  <h3>4.2 Inspección Detallada de Recursos del Cluster</h3>
+  <h3>5.2 Inspección Detallada de Recursos del Cluster</h3>
   <p>
     Tras emitir la orden de creación, Kubernetes gestiona automáticamente la jerarquía de objetos: el Deployment gestiona un ReplicaSet, y este a su vez supervisa la creación y estado de salud de los Pods.
   </p>
@@ -1283,7 +1404,7 @@ nginx-test-5b77bfd686   1         1         1       11m   nginx        nginx    
   <pre><code>NAME                          READY   STATUS    RESTARTS   AGE   IP           NODE          NOMINATED NODE   READINESS GATES
 nginx-test-5b77bfd686-xsbgg   1/1     Running   0          11m   10.244.1.2   k8s-worker1   &lt;none&gt;           &lt;none&gt;</code></pre>
 
-  <h3>4.3 Exposición Externa mediante Servicio NodePort</h3>
+  <h3>5.3 Exposición Externa mediante Servicio NodePort</h3>
   <p>
     Para acceder al servidor web Nginx desde el equipo anfitrión (o desde fuera del cluster), exponemos el despliegue creando un objeto <code>Service</code> de tipo <code>NodePort</code>. Este tipo de servicio abre un puerto aleatorio en el rango predeterminado de Kubernetes (<code>30000-32767</code>) en <strong>todos</strong> los nodos del cluster (tanto en <code>k8s-master</code> como en <code>k8s-worker1</code>):
   </p>
@@ -1301,7 +1422,7 @@ nginx-test   NodePort    10.98.102.4   &lt;none&gt;        80:30482/TCP   10m   
     En la columna <code>PORT(S)</code> observamos el mapeo <code>80:30482/TCP</code>. El puerto interno del contenedor es el <code>80</code>, mientras que el puerto expuesto en los nodos del cluster es el <code>30482</code>. En su entorno de laboratorio este puerto se asignará de manera aleatoria entre el 30000 y el 32767.
   </div>
 
-  <h3>4.4 Verificación de Conectividad HTTP y Acceso Externo</h3>
+  <h3>5.4 Verificación de Conectividad HTTP y Acceso Externo</h3>
   <p>
     Dado que el servicio <code>NodePort</code> publica el puerto en todos los nodos del cluster, podemos consultar cualquiera de las IPs de la red Host-Only (<code>192.168.56.0/24</code>) para acceder al servicio.
   </p>
@@ -1389,7 +1510,7 @@ security features and capabilities please refer to
     Aunque el pod de Nginx está ejecutándose en el worker (<code>k8s-worker1</code>), la petición a la IP del master responde correctamente gracias a <code>kube-proxy</code> y Flannel CNI, que gestionan el balanceo y enrutamiento interno entre nodos automáticamente.
   </div>
 
-  <h3>4.5 Acceso Temporal mediante Port-Forward y Limpieza de Recursos</h3>
+  <h3>5.5 Acceso Temporal mediante Port-Forward y Limpieza de Recursos</h3>
   <p>
     Además de exponer un servicio mediante <code>NodePort</code>, Kubernetes permite redirigir tráfico de forma temporal para pruebas y depuración inmediata utilizando el comando <code>kubectl port-forward</code>. Este comando abre un túnel directo desde un puerto local hacia el Pod o Deployment sin necesidad de un objeto Service:
   </p>
@@ -1404,7 +1525,7 @@ security features and capabilities please refer to
 
   <!-- TROUBLESHOOTING -->
   <div class="page-break"></div>
-  <h2>5. Resolución de Problemas Frecuentes (Troubleshooting)</h2>
+  <h2>6. Resolución de Problemas Frecuentes (Troubleshooting)</h2>
 
   <div class="alert alert-important">
     <div class="alert-title">Fallo 1: "The connection to the server 10.0.2.15:6443 was refused"</div>
