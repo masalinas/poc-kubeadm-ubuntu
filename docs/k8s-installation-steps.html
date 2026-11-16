@@ -439,7 +439,16 @@
           <li class="toc-subitem">3.6 Ciclo de Vida del Laboratorio (status, halt, ssh, destroy)</li>
         </ul>
       </li>
-      <li class="toc-item">4. Resolución de Problemas Frecuentes (Troubleshooting)</li>
+      <li class="toc-item">4. Sección 3: Ejemplo Práctico de Despliegue en el Cluster (Nginx)
+        <ul class="toc-sublist">
+          <li class="toc-subitem">4.1 Creación del Deployment de Nginx</li>
+          <li class="toc-subitem">4.2 Inspección Detallada de Recursos del Cluster</li>
+          <li class="toc-subitem">4.3 Exposición Externa mediante Servicio NodePort</li>
+          <li class="toc-subitem">4.4 Verificación de Conectividad HTTP y Acceso Externo</li>
+          <li class="toc-subitem">4.5 Acceso Temporal mediante Port-Forward y Limpieza de Recursos</li>
+        </ul>
+      </li>
+      <li class="toc-item">5. Resolución de Problemas Frecuentes (Troubleshooting)</li>
     </ul>
   </div>
 
@@ -1233,9 +1242,169 @@ kubectl get nodes -o wide</code></pre>
     </tbody>
   </table>
 
+  <!-- SECCIÓN 3: EJEMPLO DE DESPLIEGUE -->
+  <div class="page-break"></div>
+  <div class="section-banner">
+    <h2>4. Sección 3: Ejemplo Práctico de Despliegue en el Cluster (Nginx)</h2>
+    <p>Objetivo pedagógico: Validar la operatividad del cluster desplegando una carga de trabajo, exponiéndola vía NodePort y verificando tráfico HTTP.</p>
+  </div>
+
+  <h3>4.1 Creación del Deployment de Nginx</h3>
+  <p>
+    Desplegamos un servidor web Nginx básico en el cluster utilizando un objeto de tipo <code>Deployment</code> en el namespace <code>default</code>:
+  </p>
+  <pre><code>kubectl create deployment nginx-test --image=nginx</code></pre>
+  <p><strong>Salida real del comando:</strong></p>
+  <pre><code>deployment.apps/nginx-test created</code></pre>
+
+  <h3>4.2 Inspección Detallada de Recursos del Cluster</h3>
+  <p>
+    Tras emitir la orden de creación, Kubernetes gestiona automáticamente la jerarquía de objetos: el Deployment gestiona un ReplicaSet, y este a su vez supervisa la creación y estado de salud de los Pods.
+  </p>
+
+  <h4>1. Verificación del Deployment</h4>
+  <p>Comprobamos el estado del Deployment, observando que la réplica solicitada está lista y disponible:</p>
+  <pre><code>kubectl get deployments -o wide</code></pre>
+  <p><strong>Salida real de terminal:</strong></p>
+  <pre><code>NAME         READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES   SELECTOR
+nginx-test   1/1     1            1           11m   nginx        nginx    app=nginx-test</code></pre>
+
+  <h4>2. Verificación del ReplicaSet</h4>
+  <p>El Deployment ha creado un ReplicaSet con el hash correspondiente a la plantilla de Pods:</p>
+  <pre><code>kubectl get rs -o wide</code></pre>
+  <p><strong>Salida real de terminal:</strong></p>
+  <pre><code>NAME                    DESIRED   CURRENT   READY   AGE   CONTAINERS   IMAGES   SELECTOR
+nginx-test-5b77bfd686   1         1         1       11m   nginx        nginx    app=nginx-test,pod-template-hash=5b77bfd686</code></pre>
+
+  <h4>3. Verificación del Pod y su Asignación de Red</h4>
+  <p>Comprobamos que el Pod se encuentra en estado <code>Running</code>, tiene una IP asignada dentro del rango CIDR de Flannel (<code>10.244.1.2</code>) y ha sido programado en el nodo worker (<code>k8s-worker1</code>):</p>
+  <pre><code>kubectl get pods -o wide</code></pre>
+  <p><strong>Salida real de terminal:</strong></p>
+  <pre><code>NAME                          READY   STATUS    RESTARTS   AGE   IP           NODE          NOMINATED NODE   READINESS GATES
+nginx-test-5b77bfd686-xsbgg   1/1     Running   0          11m   10.244.1.2   k8s-worker1   &lt;none&gt;           &lt;none&gt;</code></pre>
+
+  <h3>4.3 Exposición Externa mediante Servicio NodePort</h3>
+  <p>
+    Para acceder al servidor web Nginx desde el equipo anfitrión (o desde fuera del cluster), exponemos el despliegue creando un objeto <code>Service</code> de tipo <code>NodePort</code>. Este tipo de servicio abre un puerto aleatorio en el rango predeterminado de Kubernetes (<code>30000-32767</code>) en <strong>todos</strong> los nodos del cluster (tanto en <code>k8s-master</code> como en <code>k8s-worker1</code>):
+  </p>
+  <pre><code>kubectl expose deployment nginx-test --port=80 --type=NodePort</code></pre>
+
+  <p>Listamos los servicios activos en el cluster para identificar el puerto <code>NodePort</code> asignado:</p>
+  <pre><code>kubectl get services -o wide</code></pre>
+  <p><strong>Salida real de terminal:</strong></p>
+  <pre><code>NAME         TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)        AGE   SELECTOR
+kubernetes   ClusterIP   10.96.0.1     &lt;none&gt;        443/TCP        34h   &lt;none&gt;
+nginx-test   NodePort    10.98.102.4   &lt;none&gt;        80:30482/TCP   10m   app=nginx-test</code></pre>
+
+  <div class="alert alert-note">
+    <div class="alert-title">Mapeo de Puertos NodePort</div>
+    En la columna <code>PORT(S)</code> observamos el mapeo <code>80:30482/TCP</code>. El puerto interno del contenedor es el <code>80</code>, mientras que el puerto expuesto en los nodos del cluster es el <code>30482</code>. En su entorno de laboratorio este puerto se asignará de manera aleatoria entre el 30000 y el 32767.
+  </div>
+
+  <h3>4.4 Verificación de Conectividad HTTP y Acceso Externo</h3>
+  <p>
+    Dado que el servicio <code>NodePort</code> publica el puerto en todos los nodos del cluster, podemos consultar cualquiera de las IPs de la red Host-Only (<code>192.168.56.0/24</code>) para acceder al servicio.
+  </p>
+
+  <h4>1. Identificación de las IPs de los Nodos</h4>
+  <p>Listamos los nodos del cluster y sus direcciones IP internas:</p>
+  <pre><code>kubectl get nodes -o wide</code></pre>
+  <p><strong>Salida real de terminal:</strong></p>
+  <pre><code>NAME          STATUS   ROLES           AGE   VERSION    INTERNAL-IP     EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION       CONTAINER-RUNTIME
+k8s-master    Ready    control-plane   34h   v1.31.14   192.168.56.10   &lt;none&gt;        Ubuntu 22.04.5 LTS   5.15.0-203-generic   containerd://2.2.1
+k8s-worker1   Ready    &lt;none&gt;          34h   v1.31.14   192.168.56.11   &lt;none&gt;        Ubuntu 22.04.5 LTS   5.15.0-203-generic   containerd://2.2.1</code></pre>
+
+  <h4>2. Acceso desde el Navegador Web</h4>
+  <p>Desde el navegador del equipo anfitrión físico, podemos acceder a cualquiera de las dos URLs:</p>
+  <ul>
+    <li><code>http://192.168.56.10:30482/</code> (IP del nodo master)</li>
+    <li><code>http://192.168.56.11:30482/</code> (IP del nodo worker)</li>
+  </ul>
+
+  <h4>3. Verificación mediante cURL en Consola</h4>
+  <p>Comprobamos el acceso mediante <code>curl</code> apuntando a la IP del master:</p>
+  <pre><code>curl http://192.168.56.10:30482/</code></pre>
+  <p><strong>Salida de respuesta:</strong></p>
+  <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Welcome to nginx!&lt;/title&gt;
+&lt;style&gt;
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Welcome to nginx!&lt;/h1&gt;
+&lt;p&gt;If you see this page, nginx is successfully installed and working.
+Further configuration is required for the web server, reverse proxy,
+API gateway, load balancer, content cache, or other features.&lt;/p&gt;
+
+&lt;p&gt;For online documentation and support please refer to
+&lt;a href="https://nginx.org/"&gt;nginx.org&lt;/a&gt;.&lt;br/&gt;
+To engage with the community please visit
+&lt;a href="https://community.nginx.org/"&gt;community.nginx.org&lt;/a&gt;.&lt;br/&gt;
+For enterprise grade support, professional services, additional
+security features and capabilities please refer to
+&lt;a href="https://f5.com/nginx"&gt;f5.com/nginx&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Thank you for using nginx.&lt;/em&gt;&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+  <p>Comprobamos el acceso apuntando a la IP del worker:</p>
+  <pre><code>curl http://192.168.56.11:30482/</code></pre>
+  <p><strong>Salida de respuesta:</strong></p>
+  <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Welcome to nginx!&lt;/title&gt;
+&lt;style&gt;
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Welcome to nginx!&lt;/h1&gt;
+&lt;p&gt;If you see this page, nginx is successfully installed and working.
+Further configuration is required for the web server, reverse proxy,
+API gateway, load balancer, content cache, or other features.&lt;/p&gt;
+
+&lt;p&gt;For online documentation and support please refer to
+&lt;a href="https://nginx.org/"&gt;nginx.org&lt;/a&gt;.&lt;br/&gt;
+To engage with the community please visit
+&lt;a href="https://community.nginx.org/"&gt;community.nginx.org&lt;/a&gt;.&lt;br/&gt;
+For enterprise grade support, professional services, additional
+security features and capabilities please refer to
+&lt;a href="https://f5.com/nginx"&gt;f5.com/nginx&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Thank you for using nginx.&lt;/em&gt;&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+  <div class="alert alert-tip">
+    <div class="alert-title">Enrutamiento Multinodo Transparente</div>
+    Aunque el pod de Nginx está ejecutándose en el worker (<code>k8s-worker1</code>), la petición a la IP del master responde correctamente gracias a <code>kube-proxy</code> y Flannel CNI, que gestionan el balanceo y enrutamiento interno entre nodos automáticamente.
+  </div>
+
+  <h3>4.5 Acceso Temporal mediante Port-Forward y Limpieza de Recursos</h3>
+  <p>
+    Además de exponer un servicio mediante <code>NodePort</code>, Kubernetes permite redirigir tráfico de forma temporal para pruebas y depuración inmediata utilizando el comando <code>kubectl port-forward</code>. Este comando abre un túnel directo desde un puerto local hacia el Pod o Deployment sin necesidad de un objeto Service:
+  </p>
+  <pre><code>kubectl port-forward deployment/nginx-test 8080:80 --address 0.0.0.0</code></pre>
+  <p><strong>Salida real del comando:</strong></p>
+  <pre><code>Forwarding from 0.0.0.0:8080 -&gt; 80</code></pre>
+  <p>Con este túnel activo, podemos comprobar el servicio accediendo a <code>http://localhost:8080</code> o a la IP del nodo en el puerto <code>8080</code>.</p>
+
+  <h4>Limpieza de Recursos de Prueba</h4>
+  <p>Una vez concluidas las pruebas de validación, procedemos a eliminar tanto el Deployment como el Service creados para dejar el cluster en su estado original:</p>
+  <pre><code>kubectl delete deployment,svc nginx-test</code></pre>
+
   <!-- TROUBLESHOOTING -->
   <div class="page-break"></div>
-  <h2>4. Resolución de Problemas Frecuentes (Troubleshooting)</h2>
+  <h2>5. Resolución de Problemas Frecuentes (Troubleshooting)</h2>
 
   <div class="alert alert-important">
     <div class="alert-title">Fallo 1: "The connection to the server 10.0.2.15:6443 was refused"</div>
