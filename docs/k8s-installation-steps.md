@@ -16,6 +16,9 @@
 2. [Sección 1: Despliegue Manual Paso a Paso con Kubeadm](#2-sección-1-despliegue-manual-paso-a-paso-con-kubeadm)
    - 2.1 Creación de la Red Solo-Anfitrión en VirtualBox (`vboxnet0`)
    - 2.2 Creación y Configuración de VMs en VirtualBox 7.0
+     * 2.2.1 Creación de la Red Solo-Anfitrión (`step_00.png`)
+     * 2.2.2 Guía Paso a Paso para la VM Master (`k8s-master`)
+     * 2.2.3 Guía Paso a Paso para la VM Worker (`k8s-worker1`)
    - 2.3 Configuración de Idioma y Teclado Español
    - 2.4 Persistencia de Red: Bloqueo de Cloud-Init y Netplan Estático
    - 2.5 Preparación Base del Sistema Operativo (SWAP, Kernel y Sysctl)
@@ -163,6 +166,227 @@ Crea dos máquinas virtuales en la interfaz gráfica de VirtualBox con las sigui
 
 > [!IMPORTANT]
 > **Si clonas la máquina master para crear el worker:** En la ventana de clonación, selecciona obligatoriamente la opción **"Generar nuevas direcciones MAC para todos los adaptadores de red"**. De lo contrario, ambas VMs tendrán interfaces de red idénticas y la comunicación fallará.
+
+---
+
+#### 2.2.1 Creación de la Red Solo-Anfitrión en VirtualBox (`step_00.png`)
+
+Antes de crear las máquinas virtuales, es indispensable aprovisionar la red privada aislada que interconectará los nodos. En la consola principal de VirtualBox accedemos al menú lateral **Herramientas -> Redes** y pulsamos en el botón **+** (**Crear**) para generar la red sólo-anfitrión `vboxnet0` con direccionamiento estático `192.168.56.1/24` y el servidor DHCP deshabilitado:
+
+![Creación de la red sólo-anfitrión en VirtualBox](images/step_00.png)
+*Figura 2.1: Panel de administración de redes de VirtualBox mostrando la creación de la red sólo-anfitrión vboxnet0.*
+
+---
+
+#### 2.2.2 Asistente Visual Paso a Paso para la Creación de la VM Master (`k8s-master`)
+
+A continuación se ilustran ordenadamente los 20 pasos para la creación de la máquina virtual del plano de control (`k8s-master`) y la instalación guiada de Ubuntu Server 22.04.5 LTS:
+
+##### Paso 1: Nombre, Carpeta de Destino e Imagen ISO
+Seleccionamos el nombre descriptivo `k8s-master`, la carpeta de almacenamiento de las VMs y la imagen ISO descargada de Ubuntu Server, marcando la opción de omitir instalación desatendida:
+![Paso 1 Master: Nombre y sistema operativo](images/master/step_01.png)
+*Figura 2.2: Selección de nombre (k8s-master), tipo Linux (Ubuntu 64-bit) y montaje de la imagen ISO.*
+
+##### Paso 2: Configuración de Instalación Desatendida
+Confirmamos los datos del usuario predeterminado o la omisión del instalador desatendido en el asistente:
+![Paso 2 Master: Instalación desatendida](images/master/step_02.png)
+*Figura 2.3: Ventana de confirmación de instalación del sistema operativo invitado.*
+
+##### Paso 3: Asignación de Recursos de Hardware (RAM y vCPUs)
+Asignamos 3072 MB (3 GB) de memoria RAM y 2 vCPUs para garantizar la estabilidad del plano de control exigida por kubeadm:
+![Paso 3 Master: Hardware de la máquina virtual](images/master/step_03.png)
+*Figura 2.4: Asignación de 3072 MB de RAM y 2 procesadores virtuales vCPUs.*
+
+##### Paso 4: Creación del Disco Duro Virtual VDI
+Creamos un disco duro virtual en formato VDI de 25.00 GB con reserva dinámica de espacio:
+![Paso 4 Master: Disco duro virtual](images/master/step_04.png)
+*Figura 2.5: Creación del disco virtual VDI reservado dinámicamente de 25 GB.*
+
+##### Paso 5: Resumen de Parámetros y Configuración de Red
+Revisamos las propiedades de la VM y configuramos las dos interfaces: Adaptador 1 en NAT y Adaptador 2 en `vboxnet0` con modo promiscuo en *Permitir todo*:
+![Paso 5 Master: Configuración de red y resumen](images/master/step_05.png)
+*Figura 2.6: Ajuste de los adaptadores de red (NAT y vboxnet0 modo promiscuo).*
+
+##### Paso 6: Arranque del Instalador y Selección de Idioma
+Iniciamos la máquina virtual e indicamos el idioma predeterminado del instalador de Ubuntu Server:
+![Paso 6 Master: Selección de idioma](images/master/step_06.png)
+*Figura 2.7: Menú inicial del instalador de Ubuntu Server para la selección de idioma.*
+
+##### Paso 7: Actualización del Asistente Subiquity
+Si el asistente detecta una nueva versión del instalador, seleccionamos *Continue without updating* para ceñirnos a la versión estable:
+![Paso 7 Master: Actualización del instalador](images/master/step_07.png)
+*Figura 2.8: Notificación de actualización del asistente de instalación subiquity.*
+
+##### Paso 8: Configuración de la Distribución del Teclado
+Establecemos la disposición del teclado adecuada al teclado físico del usuario:
+![Paso 8 Master: Distribución del teclado](images/master/step_08.png)
+*Figura 2.9: Configuración de la distribución del teclado en el asistente de instalación.*
+
+##### Paso 9: Selección de la Base de Instalación
+Elegimos la opción *Ubuntu Server* estándar, garantizando una instalación minimalista sin entornos de escritorio:
+![Paso 9 Master: Base de instalación](images/master/step_09.png)
+*Figura 2.10: Selección del paquete base de Ubuntu Server.*
+
+##### Paso 10: Detección de Interfaces de Red
+El instalador detecta las dos tarjetas de red (`enp0s3` y `enp0s8`), configurándolas temporalmente por DHCP:
+![Paso 10 Master: Interfaces de red detectadas](images/master/step_10.png)
+*Figura 2.11: Detección de las interfaces de red primaria (NAT) y secundaria (Host-Only).*
+
+##### Paso 11: Configuración de Proxy HTTP
+Al disponer de acceso directo a la red, dejamos en blanco el campo de proxy HTTP:
+![Paso 11 Master: Configuración de proxy](images/master/step_11.png)
+*Figura 2.12: Pantalla de proxy HTTP dejada en blanco.*
+
+##### Paso 12: Servidor Espejo de Archivos (Ubuntu Archive Mirror)
+Confirmamos la URL del repositorio oficial de paquetes de Ubuntu y validamos su respuesta:
+![Paso 12 Master: Espejo de paquetes de Ubuntu](images/master/step_12.png)
+*Figura 2.13: Validación del mirror oficial de paquetes de Ubuntu.*
+
+##### Paso 13: Esquema de Particionado Guiado (LVM)
+Marcamos la opción de utilizar el disco completo (*Use an entire disk*) creando la estructura de volúmenes lógicos LVM:
+![Paso 13 Master: Configuración de almacenamiento guiado](images/master/step_13.png)
+*Figura 2.14: Selección de uso del disco completo y configuración de grupo LVM.*
+
+##### Paso 14: Confirmación Destructiva de Escritura en Disco
+Revisamos las particiones generadas y confirmamos la escritura en el disco virtual pulsando *Continue*:
+![Paso 14 Master: Confirmación de particionado](images/master/step_14.png)
+*Figura 2.15: Resumen del mapa de particiones y advertencia destructiva de confirmación.*
+
+##### Paso 15: Configuración de Perfil de Usuario y Nombre del Host
+Indicamos el nombre de red del servidor (**`k8s-master`**), junto con el usuario y contraseña de administración:
+![Paso 15 Master: Configuración de perfil y credenciales](images/master/step_15.png)
+*Figura 2.16: Creación de la cuenta de usuario y asignación del hostname k8s-master.*
+
+##### Paso 16: Omisión de Ubuntu Pro
+En la ventana de registro y soporte extendido seleccionamos *Skip for now* para omitir el servicio:
+![Paso 16 Master: Omisión de Ubuntu Pro](images/master/step_16.png)
+*Figura 2.17: Omisión de la suscripción a servicios comerciales de Ubuntu Pro.*
+
+##### Paso 17: Habilitación de OpenSSH Server
+Marcamos de forma indispensable la opción **Install OpenSSH server** para habilitar la administración remota segura:
+![Paso 17 Master: Instalación de servidor SSH](images/master/step_17.png)
+*Figura 2.18: Selección obligatoria del paquete OpenSSH server.*
+
+##### Paso 18: Selección de Featured Server Snaps
+Dejamos desmarcados todos los servicios snaps adicionales para mantener un sistema limpio y liviano:
+![Paso 18 Master: Snaps de servidor](images/master/step_18.png)
+*Figura 2.19: Lista de snaps adicionales desmarcados.*
+
+##### Paso 19: Instalación de Paquetes Base y Seguridad
+El instalador transfiere los paquetes del sistema operativo, el núcleo Linux y las actualizaciones de seguridad:
+![Paso 19 Master: Proceso de instalación](images/master/step_19.png)
+*Figura 2.20: Registro del progreso de instalación de paquetes y configuración del sistema.*
+
+##### Paso 20: Finalización de la Instalación y Reinicio
+Pulsamos sobre **Reboot Now**, desmontamos la imagen ISO virtual y confirmamos el arranque limpio de `k8s-master` hasta la consola de login:
+![Paso 20 Master: Reinicio e inicio de sesión](images/master/step_20.png)
+*Figura 2.21: Finalización del proceso de instalación e inicio de sesión en k8s-master.*
+
+---
+
+#### 2.2.3 Asistente Visual Paso a Paso para la Creación de la VM Worker (`k8s-worker1`)
+
+A continuación se ilustran ordenadamente los 20 pasos para la creación de la máquina virtual del nodo de trabajo (`k8s-worker1`):
+
+##### Paso 1: Nombre, Carpeta e Imagen ISO para el Worker
+Definimos el nombre descriptivo `k8s-worker1`, tipo Linux (Ubuntu 64-bit) y la imagen ISO montada marcando omitir instalación desatendida:
+![Paso 1 Worker: Nombre y sistema operativo](images/worker/step_01.png)
+*Figura 2.22: Creación de la VM k8s-worker1 y selección de la imagen ISO.*
+
+##### Paso 2: Instalación Desatendida
+Confirmamos los parámetros de instalación en la pantalla del sistema operativo invitado:
+![Paso 2 Worker: Asistente desatendido](images/worker/step_02.png)
+*Figura 2.23: Confirmación de parámetros en el asistente de instalación.*
+
+##### Paso 3: Asignación de Recursos de Hardware (RAM y vCPUs)
+Asignamos 2048 MB (2 GB) de memoria RAM y 2 vCPUs para la ejecución de cargas de trabajo de pods:
+![Paso 3 Worker: Hardware de la máquina virtual](images/worker/step_03.png)
+*Figura 2.24: Asignación de 2048 MB de RAM y 2 vCPUs para k8s-worker1.*
+
+##### Paso 4: Creación del Disco Duro Virtual VDI
+Creamos un disco duro virtual VDI con asignación dinámica de 20.00 GB de capacidad:
+![Paso 4 Worker: Disco duro virtual](images/worker/step_04.png)
+*Figura 2.25: Creación del disco virtual VDI de 20 GB para el nodo worker.*
+
+##### Paso 5: Configuración de Adaptadores de Red y Resumen
+Ajustamos los adaptadores de red: Adaptador 1 en NAT y Adaptador 2 en `vboxnet0` con modo promiscuo en *Permitir todo*:
+![Paso 5 Worker: Configuración de red y resumen](images/worker/step_05.png)
+*Figura 2.26: Ajuste de interfaces de red con vboxnet0 y modo promiscuo activado.*
+
+##### Paso 6: Arranque del Instalador y Selección de Idioma
+Iniciamos la VM `k8s-worker1` y establecemos el idioma deseado para el proceso:
+![Paso 6 Worker: Selección de idioma](images/worker/step_06.png)
+*Figura 2.27: Menú de idioma para el nodo k8s-worker1.*
+
+##### Paso 7: Actualización del Instalador
+Seleccionamos la opción para continuar con la versión actual del instalador:
+![Paso 7 Worker: Actualización del instalador](images/worker/step_07.png)
+*Figura 2.28: Confirmación de versión del instalador subiquity.*
+
+##### Paso 8: Distribución del Teclado
+Configuramos la disposición adecuada para la entrada de caracteres:
+![Paso 8 Worker: Distribución de teclado](images/worker/step_08.png)
+*Figura 2.29: Configuración de teclado en el nodo worker.*
+
+##### Paso 9: Base de Instalación de Ubuntu Server
+Elegimos la versión estándar de Ubuntu Server sin servicios gráficos adicionales:
+![Paso 9 Worker: Selección de paquete base](images/worker/step_09.png)
+*Figura 2.30: Selección del paquete estándar sin entorno gráfico.*
+
+##### Paso 10: Interfaces de Red Detectadas
+Validamos la correcta identificación de las tarjetas `enp0s3` y `enp0s8`:
+![Paso 10 Worker: Interfaces de red](images/worker/step_10.png)
+*Figura 2.31: Interfaces de red identificadas en el asistente.*
+
+##### Paso 11: Configuración de Proxy HTTP
+Dejamos en blanco la configuración de proxy al contar con salida directa:
+![Paso 11 Worker: Proxy HTTP](images/worker/step_11.png)
+*Figura 2.32: Configuración de proxy HTTP en blanco.*
+
+##### Paso 12: Repositorio Espejo de Paquetes
+Validamos la conexión con el mirror oficial de Ubuntu:
+![Paso 12 Worker: Espejo de paquetes](images/worker/step_12.png)
+*Figura 2.33: Verificación del mirror oficial de paquetes.*
+
+##### Paso 13: Configuración Guiada del Almacenamiento (LVM)
+Seleccionamos el disco entero de 20 GB configurando el grupo de volúmenes LVM:
+![Paso 13 Worker: Particionado LVM](images/worker/step_13.png)
+*Figura 2.34: Configuración de almacenamiento con particionado LVM.*
+
+##### Paso 14: Confirmación Destructiva de Particionado
+Aceptamos la escritura definitiva de los volúmenes en el disco virtual:
+![Paso 14 Worker: Confirmación de disco](images/worker/step_14.png)
+*Figura 2.35: Confirmación de formateo y creación de volúmenes.*
+
+##### Paso 15: Configuración de Perfil y Nombre del Host
+Definimos el nombre de red del servidor (**`k8s-worker1`**) y las credenciales de administración:
+![Paso 15 Worker: Configuración de perfil y credenciales](images/worker/step_15.png)
+*Figura 2.36: Creación del usuario y asignación del hostname k8s-worker1.*
+
+##### Paso 16: Pantalla de Ubuntu Pro
+Seleccionamos *Skip for now* para omitir la activación del soporte extendido:
+![Paso 16 Worker: Omisión de Ubuntu Pro](images/worker/step_16.png)
+*Figura 2.37: Continuación sin registro en Ubuntu Pro.*
+
+##### Paso 17: Instalación de OpenSSH Server
+Marcamos de forma imprescindible la opción **Install OpenSSH server**:
+![Paso 17 Worker: Selección de OpenSSH server](images/worker/step_17.png)
+*Figura 2.38: Instalación obligatoria del servidor OpenSSH.*
+
+##### Paso 18: Snaps Destacados de Servidor
+Mantenemos desmarcados los snaps adicionales para optimizar recursos:
+![Paso 18 Worker: Featured Server Snaps](images/worker/step_18.png)
+*Figura 2.39: Lista de snaps adicionales desmarcados.*
+
+##### Paso 19: Instalación de Paquetes Base y Dependencias
+El instalador descarga y aplica los paquetes del sistema en el nodo worker:
+![Paso 19 Worker: Progreso de instalación](images/worker/step_19.png)
+*Figura 2.40: Progreso de descarga e instalación del sistema base.*
+
+##### Paso 20: Finalización e Inicio de Sesión
+Hacemos clic en **Reboot Now**, retiramos el medio de instalación virtual y confirmamos que `k8s-worker1` arranca hasta el prompt de inicio de sesión:
+![Paso 20 Worker: Reinicio e inicio de sesión](images/worker/step_20.png)
+*Figura 2.41: Nodo k8s-worker1 operativo y preparado para la configuración de red y unión al cluster.*
 
 ---
 

@@ -289,7 +289,7 @@
     }
 
     .dashboard-figure img {
-      max-width: 100%;
+      max-width: 98%;
       height: auto;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
@@ -301,6 +301,66 @@
     .figure-caption {
       margin-top: 8px;
       font-size: 8.5pt;
+      color: #64748b;
+      font-style: italic;
+      text-align: center;
+    }
+
+    h5 {
+      font-size: 9.5pt;
+      font-weight: 600;
+      color: #1e3a8a;
+      margin-top: 6px;
+      margin-bottom: 2px;
+      page-break-after: avoid;
+    }
+
+    .step-pair {
+      page-break-inside: avoid;
+      margin-bottom: 8px;
+    }
+
+    .step-card {
+      margin-bottom: 6px;
+    }
+
+    .step-card h5 {
+      font-size: 9pt;
+      font-weight: 600;
+      color: #1e3a8a;
+      margin-top: 4px;
+      margin-bottom: 2px;
+    }
+
+    .step-card p {
+      font-size: 8.2pt;
+      line-height: 1.3;
+      margin-top: 0;
+      margin-bottom: 4px;
+      color: #334155;
+    }
+
+    .step-figure {
+      margin: 2px 0 4px 0;
+      text-align: center;
+      page-break-inside: avoid;
+    }
+
+    .step-figure img {
+      max-width: 98%;
+      max-height: 400px;
+      height: auto;
+      object-fit: contain;
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      display: block;
+      margin: 0 auto;
+    }
+
+    .step-caption {
+      margin-top: 2px;
+      font-size: 7.5pt;
       color: #64748b;
       font-style: italic;
       text-align: center;
@@ -442,7 +502,13 @@
       <li class="toc-item">2. Sección 1: Despliegue Manual Paso a Paso con Kubeadm
         <ul class="toc-sublist">
           <li class="toc-subitem">2.1 Creación de la Red Solo-Anfitrión en VirtualBox (vboxnet0)</li>
-          <li class="toc-subitem">2.2 Creación y Configuración de VMs en VirtualBox 7.0</li>
+          <li class="toc-subitem">2.2 Creación y Configuración de VMs en VirtualBox 7.0
+            <ul class="toc-sublist">
+              <li class="toc-subitem">2.2.1 Creación de la Red Solo-Anfitrión (step_00.png)</li>
+              <li class="toc-subitem">2.2.2 Guía Paso a Paso para la VM Master (k8s-master)</li>
+              <li class="toc-subitem">2.2.3 Guía Paso a Paso para la VM Worker (k8s-worker1)</li>
+            </ul>
+          </li>
           <li class="toc-subitem">2.3 Configuración de Idioma y Teclado Español</li>
           <li class="toc-subitem">2.4 Persistencia de Red: Bloqueo de Cloud-Init y Netplan Estático</li>
           <li class="toc-subitem">2.5 Preparación Base del Sistema Operativo (SWAP, Kernel y Sysctl)</li>
@@ -615,6 +681,408 @@
     Si instalas el Master y lo clonas para crear el Worker, marca obligatoriamente: <strong>"Generar nuevas direcciones MAC para todos los adaptadores de red"</strong>. Si tienen la misma MAC, la red fallará.
   </div>
 
+  <h4>2.2.1 Creación de la Red Solo-Anfitrión en VirtualBox</h4>
+  <p>
+    Antes de crear las máquinas virtuales, es indispensable aprovisionar la red privada aislada que interconectará los nodos. En la consola principal de VirtualBox accedemos al menú lateral <strong>Herramientas -&gt; Redes</strong> y pulsamos en el botón <strong>+</strong> (<strong>Crear</strong>) para generar la red sólo-anfitrión <code>vboxnet0</code> con direccionamiento estático <code>192.168.56.1/24</code> y el servidor DHCP deshabilitado:
+  </p>
+  <figure class="step-figure">
+    <img src="images/step_00.png" alt="Creación de red sólo-anfitrión en VirtualBox">
+    <figcaption class="step-caption">Figura 2.1: Panel de administración de redes de VirtualBox mostrando la creación de la red sólo-anfitrión vboxnet0.</figcaption>
+  </figure>
+
+  <div class="page-break"></div>
+  <h4>2.2.2 Asistente Visual Paso a Paso para la Creación de la VM Master (k8s-master)</h4>
+  <p>
+    A continuación se ilustran ordenadamente los 20 pasos para la creación de la máquina virtual del plano de control (<code>k8s-master</code>) y la instalación guiada de Ubuntu Server 22.04.5 LTS:
+  </p>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 1: Nombre, Carpeta de Destino e Imagen ISO</h5>
+  <p>Seleccionamos el nombre descriptivo <code>k8s-master</code>, la carpeta de almacenamiento de las VMs y la imagen ISO descargada de Ubuntu Server, marcando la opción de omitir instalación desatendida:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_01.png" alt="Paso 1 Master: Nombre y sistema operativo">
+    <figcaption class="step-caption">Figura 2.2: Selección de nombre (k8s-master), tipo Linux (Ubuntu 64-bit) y montaje de la imagen ISO.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 2: Configuración de Instalación Desatendida</h5>
+  <p>Confirmamos los datos del usuario predeterminado o la omisión del instalador desatendido en el asistente:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_02.png" alt="Paso 2 Master: Instalación desatendida">
+    <figcaption class="step-caption">Figura 2.3: Ventana de confirmación de instalación del sistema operativo invitado.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 3: Asignación de Recursos de Hardware (RAM y vCPUs)</h5>
+  <p>Asignamos 3072 MB (3 GB) de memoria RAM y 2 vCPUs para garantizar la estabilidad del plano de control exigida por kubeadm:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_03.png" alt="Paso 3 Master: Hardware de la máquina virtual">
+    <figcaption class="step-caption">Figura 2.4: Asignación de 3072 MB de RAM y 2 procesadores virtuales vCPUs.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 4: Creación del Disco Duro Virtual VDI</h5>
+  <p>Creamos un disco duro virtual en formato VDI de 25.00 GB con reserva dinámica de espacio:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_04.png" alt="Paso 4 Master: Disco duro virtual">
+    <figcaption class="step-caption">Figura 2.5: Creación del disco virtual VDI reservado dinámicamente de 25 GB.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 5: Resumen de Parámetros y Configuración de Red</h5>
+  <p>Revisamos las propiedades de la VM y configuramos las dos interfaces: Adaptador 1 en NAT y Adaptador 2 en <code>vboxnet0</code> con modo promiscuo en <em>Permitir todo</em>:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_05.png" alt="Paso 5 Master: Configuración de red y resumen">
+    <figcaption class="step-caption">Figura 2.6: Ajuste de los adaptadores de red (NAT y vboxnet0 modo promiscuo).</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 6: Arranque del Instalador y Selección de Idioma</h5>
+  <p>Iniciamos la máquina virtual e indicamos el idioma predeterminado del instalador de Ubuntu Server:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_06.png" alt="Paso 6 Master: Selección de idioma">
+    <figcaption class="step-caption">Figura 2.7: Menú inicial del instalador de Ubuntu Server para la selección de idioma.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 7: Actualización del Asistente Subiquity</h5>
+  <p>Si el asistente detecta una nueva versión del instalador, seleccionamos <em>Continue without updating</em> para ceñirnos a la versión estable:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_07.png" alt="Paso 7 Master: Actualización del instalador">
+    <figcaption class="step-caption">Figura 2.8: Notificación de actualización del asistente de instalación subiquity.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 8: Configuración de la Distribución del Teclado</h5>
+  <p>Establecemos la disposición del teclado adecuada al teclado físico del usuario:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_08.png" alt="Paso 8 Master: Distribución del teclado">
+    <figcaption class="step-caption">Figura 2.9: Configuración de la distribución del teclado en el asistente de instalación.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 9: Selección de la Base de Instalación</h5>
+  <p>Elegimos la opción <em>Ubuntu Server</em> estándar, garantizando una instalación minimalista sin entornos de escritorio:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_09.png" alt="Paso 9 Master: Base de instalación">
+    <figcaption class="step-caption">Figura 2.10: Selección del paquete base de Ubuntu Server.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 10: Detección de Interfaces de Red</h5>
+  <p>El instalador detecta las dos tarjetas de red (<code>enp0s3</code> y <code>enp0s8</code>), configurándolas temporalmente por DHCP:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_10.png" alt="Paso 10 Master: Interfaces de red detectadas">
+    <figcaption class="step-caption">Figura 2.11: Detección de las interfaces de red primaria (NAT) y secundaria (Host-Only).</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 11: Configuración de Proxy HTTP</h5>
+  <p>Al disponer de acceso directo a la red, dejamos en blanco el campo de proxy HTTP:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_11.png" alt="Paso 11 Master: Configuración de proxy">
+    <figcaption class="step-caption">Figura 2.12: Pantalla de proxy HTTP dejada en blanco.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 12: Servidor Espejo de Archivos (Ubuntu Archive Mirror)</h5>
+  <p>Confirmamos la URL del repositorio oficial de paquetes de Ubuntu y validamos su respuesta:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_12.png" alt="Paso 12 Master: Espejo de paquetes de Ubuntu">
+    <figcaption class="step-caption">Figura 2.13: Validación del mirror oficial de paquetes de Ubuntu.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 13: Esquema de Particionado Guiado (LVM)</h5>
+  <p>Marcamos la opción de utilizar el disco completo (<em>Use an entire disk</em>) creando la estructura de volúmenes lógicos LVM:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_13.png" alt="Paso 13 Master: Configuración de almacenamiento guiado">
+    <figcaption class="step-caption">Figura 2.14: Selección de uso del disco completo y configuración de grupo LVM.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 14: Confirmación Destructiva de Escritura en Disco</h5>
+  <p>Revisamos las particiones generadas y confirmamos la escritura en el disco virtual pulsando <em>Continue</em>:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_14.png" alt="Paso 14 Master: Confirmación de particionado">
+    <figcaption class="step-caption">Figura 2.15: Resumen del mapa de particiones y advertencia destructiva de confirmación.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 15: Configuración de Perfil de Usuario y Nombre del Host</h5>
+  <p>Indicamos el nombre de red del servidor (<strong><code>k8s-master</code></strong>), junto con el usuario y contraseña de administración:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_15.png" alt="Paso 15 Master: Configuración de perfil y credenciales">
+    <figcaption class="step-caption">Figura 2.16: Creación de la cuenta de usuario y asignación del hostname k8s-master.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 16: Omisión de Ubuntu Pro</h5>
+  <p>En la ventana de registro y soporte extendido seleccionamos <em>Skip for now</em> para omitir el servicio:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_16.png" alt="Paso 16 Master: Omisión de Ubuntu Pro">
+    <figcaption class="step-caption">Figura 2.17: Omisión de la suscripción a servicios comerciales de Ubuntu Pro.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 17: Habilitación de OpenSSH Server</h5>
+  <p>Marcamos de forma indispensable la opción <strong>Install OpenSSH server</strong> para habilitar la administración remota segura:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_17.png" alt="Paso 17 Master: Instalación de servidor SSH">
+    <figcaption class="step-caption">Figura 2.18: Selección obligatoria del paquete OpenSSH server.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 18: Selección de Featured Server Snaps</h5>
+  <p>Dejamos desmarcados todos los servicios snaps adicionales para mantener un sistema limpio y liviano:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_18.png" alt="Paso 18 Master: Snaps de servidor">
+    <figcaption class="step-caption">Figura 2.19: Lista de snaps adicionales desmarcados.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 19: Instalación de Paquetes Base y Seguridad</h5>
+  <p>El instalador transfiere los paquetes del sistema operativo, el núcleo Linux y las actualizaciones de seguridad:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_19.png" alt="Paso 19 Master: Proceso de instalación">
+    <figcaption class="step-caption">Figura 2.20: Registro del progreso de instalación de paquetes y configuración del sistema.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 20: Finalización de la Instalación y Reinicio</h5>
+  <p>Pulsamos sobre <strong>Reboot Now</strong>, desmontamos la imagen ISO virtual y confirmamos el arranque limpio de <code>k8s-master</code> hasta la consola de login:</p>
+  <figure class="step-figure">
+    <img src="images/master/step_20.png" alt="Paso 20 Master: Reinicio e inicio de sesión">
+    <figcaption class="step-caption">Figura 2.21: Finalización del proceso de instalación e inicio de sesión en k8s-master.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+  <h4>2.2.3 Asistente Visual Paso a Paso para la Creación de la VM Worker (k8s-worker1)</h4>
+  <p>
+    A continuación se ilustran ordenadamente los 20 pasos para la creación de la máquina virtual del nodo de trabajo (<code>k8s-worker1</code>):
+  </p>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 1: Nombre, Carpeta e Imagen ISO para el Worker</h5>
+  <p>Definimos el nombre descriptivo <code>k8s-worker1</code>, tipo Linux (Ubuntu 64-bit) y la imagen ISO montada marcando omitir instalación desatendida:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_01.png" alt="Paso 1 Worker: Nombre y sistema operativo">
+    <figcaption class="step-caption">Figura 2.22: Creación de la VM k8s-worker1 y selección de la imagen ISO.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 2: Instalación Desatendida</h5>
+  <p>Confirmamos los parámetros de instalación en la pantalla del sistema operativo invitado:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_02.png" alt="Paso 2 Worker: Asistente desatendido">
+    <figcaption class="step-caption">Figura 2.23: Confirmación de parámetros en el asistente de instalación.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 3: Asignación de Recursos de Hardware (RAM y vCPUs)</h5>
+  <p>Asignamos 2048 MB (2 GB) de memoria RAM y 2 vCPUs para la ejecución de cargas de trabajo de pods:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_03.png" alt="Paso 3 Worker: Hardware de la máquina virtual">
+    <figcaption class="step-caption">Figura 2.24: Asignación de 2048 MB de RAM y 2 vCPUs para k8s-worker1.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 4: Creación del Disco Duro Virtual VDI</h5>
+  <p>Creamos un disco duro virtual VDI con asignación dinámica de 20.00 GB de capacidad:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_04.png" alt="Paso 4 Worker: Disco duro virtual">
+    <figcaption class="step-caption">Figura 2.25: Creación del disco virtual VDI de 20 GB para el nodo worker.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 5: Configuración de Adaptadores de Red y Resumen</h5>
+  <p>Ajustamos los adaptadores de red: Adaptador 1 en NAT y Adaptador 2 en <code>vboxnet0</code> con modo promiscuo en <em>Permitir todo</em>:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_05.png" alt="Paso 5 Worker: Configuración de red y resumen">
+    <figcaption class="step-caption">Figura 2.26: Ajuste de interfaces de red con vboxnet0 y modo promiscuo activado.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 6: Arranque del Instalador y Selección de Idioma</h5>
+  <p>Iniciamos la VM <code>k8s-worker1</code> y establecemos el idioma deseado para el proceso:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_06.png" alt="Paso 6 Worker: Selección de idioma">
+    <figcaption class="step-caption">Figura 2.27: Menú de idioma para el nodo k8s-worker1.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 7: Actualización del Instalador</h5>
+  <p>Seleccionamos la opción para continuar con la versión actual del instalador:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_07.png" alt="Paso 7 Worker: Actualización del instalador">
+    <figcaption class="step-caption">Figura 2.28: Confirmación de versión del instalador subiquity.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 8: Distribución del Teclado</h5>
+  <p>Configuramos la disposición adecuada para la entrada de caracteres:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_08.png" alt="Paso 8 Worker: Distribución de teclado">
+    <figcaption class="step-caption">Figura 2.29: Configuración de teclado en el nodo worker.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 9: Base de Instalación de Ubuntu Server</h5>
+  <p>Elegimos la versión estándar de Ubuntu Server sin servicios gráficos adicionales:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_09.png" alt="Paso 9 Worker: Selección de paquete base">
+    <figcaption class="step-caption">Figura 2.30: Selección del paquete estándar sin entorno gráfico.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 10: Interfaces de Red Detectadas</h5>
+  <p>Validamos la correcta identificación de las tarjetas <code>enp0s3</code> y <code>enp0s8</code>:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_10.png" alt="Paso 10 Worker: Interfaces de red">
+    <figcaption class="step-caption">Figura 2.31: Interfaces de red identificadas en el asistente.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 11: Configuración de Proxy HTTP</h5>
+  <p>Dejamos en blanco la configuración de proxy al contar con salida directa:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_11.png" alt="Paso 11 Worker: Proxy HTTP">
+    <figcaption class="step-caption">Figura 2.32: Configuración de proxy HTTP en blanco.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 12: Repositorio Espejo de Paquetes</h5>
+  <p>Validamos la conexión con el mirror oficial de Ubuntu:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_12.png" alt="Paso 12 Worker: Espejo de paquetes">
+    <figcaption class="step-caption">Figura 2.33: Verificación del mirror oficial de paquetes.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 13: Configuración Guiada del Almacenamiento (LVM)</h5>
+  <p>Seleccionamos el disco entero de 20 GB configurando el grupo de volúmenes LVM:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_13.png" alt="Paso 13 Worker: Particionado LVM">
+    <figcaption class="step-caption">Figura 2.34: Configuración de almacenamiento con particionado LVM.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 14: Confirmación Destructiva de Particionado</h5>
+  <p>Aceptamos la escritura definitiva de los volúmenes en el disco virtual:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_14.png" alt="Paso 14 Worker: Confirmación de disco">
+    <figcaption class="step-caption">Figura 2.35: Confirmación de formateo y creación de volúmenes.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 15: Configuración de Perfil y Nombre del Host</h5>
+  <p>Definimos el nombre de red del servidor (<strong><code>k8s-worker1</code></strong>) y las credenciales de administración:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_15.png" alt="Paso 15 Worker: Configuración de perfil y credenciales">
+    <figcaption class="step-caption">Figura 2.36: Creación del usuario y asignación del hostname k8s-worker1.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 16: Pantalla de Ubuntu Pro</h5>
+  <p>Seleccionamos <em>Skip for now</em> para omitir la activación del soporte extendido:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_16.png" alt="Paso 16 Worker: Omisión de Ubuntu Pro">
+    <figcaption class="step-caption">Figura 2.37: Continuación sin registro en Ubuntu Pro.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 17: Instalación de OpenSSH Server</h5>
+  <p>Marcamos de forma imprescindible la opción <strong>Install OpenSSH server</strong>:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_17.png" alt="Paso 17 Worker: Selección de OpenSSH server">
+    <figcaption class="step-caption">Figura 2.38: Instalación obligatoria del servidor OpenSSH.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 18: Snaps Destacados de Servidor</h5>
+  <p>Mantenemos desmarcados los snaps adicionales para optimizar recursos:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_18.png" alt="Paso 18 Worker: Featured Server Snaps">
+    <figcaption class="step-caption">Figura 2.39: Lista de snaps adicionales desmarcados.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="step-pair">
+    <div class="step-card">
+      <h5>Paso 19: Instalación de Paquetes Base y Dependencias</h5>
+  <p>El instalador descarga y aplica los paquetes del sistema en el nodo worker:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_19.png" alt="Paso 19 Worker: Progreso de instalación">
+    <figcaption class="step-caption">Figura 2.40: Progreso de descarga e instalación del sistema base.</figcaption>
+  </figure>
+    </div>
+    <div class="step-card">
+      <h5>Paso 20: Finalización e Inicio de Sesión</h5>
+  <p>Hacemos clic en <strong>Reboot Now</strong>, retiramos el medio de instalación virtual y confirmamos que <code>k8s-worker1</code> arranca hasta el prompt de inicio de sesión:</p>
+  <figure class="step-figure">
+    <img src="images/worker/step_20.png" alt="Paso 20 Worker: Reinicio e inicio de sesión">
+    <figcaption class="step-caption">Figura 2.41: Nodo k8s-worker1 operativo y preparado para la configuración de red y unión al cluster.</figcaption>
+  </figure>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
   <h3>2.3 Configuración de Idioma y Teclado Español</h3>
   <p>
     Por defecto, Ubuntu Server se instala con la distribución de teclado en inglés (US). Esto genera errores de tipeo al introducir caracteres frecuentes de administración en consola como guiones (<code>-</code>), tuberías (<code>|</code>), barras (<code>/</code>), almohadillas (<code>#</code>) o comillas.
