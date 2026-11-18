@@ -401,14 +401,17 @@
       background-color: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
-      padding: 18px 24px;
-      margin-bottom: 24px;
+      padding: 14px 20px;
+      margin-bottom: 20px;
       page-break-after: always;
+      font-size: 8.5pt;
     }
 
     .toc h2 {
       margin-top: 0;
-      font-size: 14pt;
+      font-size: 13pt;
+      margin-bottom: 10px;
+      padding-bottom: 4px;
       border-bottom: 2px solid #cbd5e1;
     }
 
@@ -419,22 +422,34 @@
     }
 
     .toc-item {
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       font-weight: 600;
       color: #1e3a8a;
     }
 
     .toc-sublist {
       list-style: none;
-      padding-left: 18px;
-      margin-top: 4px;
-      margin-bottom: 8px;
+      padding-left: 16px;
+      margin-top: 2px;
+      margin-bottom: 4px;
     }
 
     .toc-subitem {
       font-weight: 400;
       color: #475569;
-      margin-bottom: 3px;
+      margin-bottom: 1.5px;
+      line-height: 1.35;
+    }
+
+    .toc a {
+      color: inherit;
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+
+    .toc a:hover {
+      color: #326ce5;
+      text-decoration: underline;
     }
 
     @media print {
@@ -492,74 +507,74 @@
   <div class="toc">
     <h2>Índice General</h2>
     <ul class="toc-list">
-      <li class="toc-item">1. Arquitectura del Laboratorio
+      <li class="toc-item"><a href="#sec-1">1. Arquitectura del Laboratorio</a>
         <ul class="toc-sublist">
-          <li class="toc-subitem">1.1 Diagrama de Topología de Red y Componentes</li>
-          <li class="toc-subitem">1.2 Matriz de Hardware e IP</li>
-          <li class="toc-subitem">1.3 Alertas Críticas de Producción (Trampas habituales)</li>
+          <li class="toc-subitem"><a href="#sec-1-1">1.1 Diagrama de Topología de Red y Componentes</a></li>
+          <li class="toc-subitem"><a href="#sec-1-2">1.2 Matriz de Hardware e IP</a></li>
+          <li class="toc-subitem"><a href="#sec-1-3">1.3 Alertas Críticas de Producción (Trampas habituales)</a></li>
         </ul>
       </li>
-      <li class="toc-item">2. Sección 1: Despliegue Manual Paso a Paso con Kubeadm
+      <li class="toc-item"><a href="#sec-2">2. Sección 1: Despliegue Manual Paso a Paso con Kubeadm</a>
         <ul class="toc-sublist">
-          <li class="toc-subitem">2.1 Creación de la Red Solo-Anfitrión en VirtualBox (vboxnet0)</li>
-          <li class="toc-subitem">2.2 Creación y Configuración de VMs en VirtualBox 7.0
+          <li class="toc-subitem"><a href="#sec-2-1">2.1 Creación de la Red Solo-Anfitrión en VirtualBox (vboxnet0)</a></li>
+          <li class="toc-subitem"><a href="#sec-2-2">2.2 Creación y Configuración de VMs en VirtualBox 7.0</a>
             <ul class="toc-sublist">
-              <li class="toc-subitem">2.2.1 Creación de la Red Solo-Anfitrión (step_00.png)</li>
-              <li class="toc-subitem">2.2.2 Guía Paso a Paso para la VM Master (k8s-master)</li>
-              <li class="toc-subitem">2.2.3 Guía Paso a Paso para la VM Worker (k8s-worker1)</li>
+              <li class="toc-subitem"><a href="#sec-2-2-1">2.2.1 Creación de la Red Solo-Anfitrión (step_00.png)</a></li>
+              <li class="toc-subitem"><a href="#sec-2-2-2">2.2.2 Guía Paso a Paso para la VM Master (k8s-master)</a></li>
+              <li class="toc-subitem"><a href="#sec-2-2-3">2.2.3 Guía Paso a Paso para la VM Worker (k8s-worker1)</a></li>
             </ul>
           </li>
-          <li class="toc-subitem">2.3 Configuración de Idioma y Teclado Español</li>
-          <li class="toc-subitem">2.4 Persistencia de Red: Bloqueo de Cloud-Init y Netplan Estático</li>
-          <li class="toc-subitem">2.5 Preparación Base del Sistema Operativo (SWAP, Kernel y Sysctl)</li>
-          <li class="toc-subitem">2.6 Instalación de Containerd y Dependencias del Sistema (conntrack, socat)</li>
-          <li class="toc-subitem">2.7 Instalación de Herramientas Kubernetes v1.31 (pkgs.k8s.io)</li>
-          <li class="toc-subitem">2.8 Inicialización del Plano de Control (Master), Flannel CNI y Registros Reales</li>
-          <li class="toc-subitem">2.9 Unión del Nodo Worker al Cluster con Dependencias y Registros Reales</li>
-          <li class="toc-subitem">2.10 Conexión Remota No Destructiva desde el Host Anfitrión (Merge Kubeconfig)</li>
+          <li class="toc-subitem"><a href="#sec-2-3">2.3 Configuración de Idioma y Teclado Español</a></li>
+          <li class="toc-subitem"><a href="#sec-2-4">2.4 Persistencia de Red: Bloqueo de Cloud-Init y Netplan Estático</a></li>
+          <li class="toc-subitem"><a href="#sec-2-5">2.5 Preparación Base del Sistema Operativo (SWAP, Kernel y Sysctl)</a></li>
+          <li class="toc-subitem"><a href="#sec-2-6">2.6 Instalación de Containerd y Dependencias del Sistema (conntrack, socat)</a></li>
+          <li class="toc-subitem"><a href="#sec-2-7">2.7 Instalación de Herramientas Kubernetes v1.31 (pkgs.k8s.io)</a></li>
+          <li class="toc-subitem"><a href="#sec-2-8">2.8 Inicialización del Plano de Control (Master), Flannel CNI y Registros Reales</a></li>
+          <li class="toc-subitem"><a href="#sec-2-9">2.9 Unión del Nodo Worker al Cluster con Dependencias y Registros Reales</a></li>
+          <li class="toc-subitem"><a href="#sec-2-10">2.10 Conexión Remota No Destructiva desde el Host Anfitrión (Merge Kubeconfig)</a></li>
         </ul>
       </li>
-      <li class="toc-item">3. Sección 2: Automatización Completa con Vagrant (IaC)
+      <li class="toc-item"><a href="#sec-3">3. Sección 2: Automatización Completa con Vagrant (IaC)</a>
         <ul class="toc-sublist">
-          <li class="toc-subitem">3.1 Arquitectura de Automatización con Vagrant</li>
-          <li class="toc-subitem">3.2 Estructura del Proyecto de Infraestructura</li>
-          <li class="toc-subitem">3.3 Archivo Vagrantfile Multi-Máquina</li>
-          <li class="toc-subitem">3.4 Scripts de Aprovisionamiento Modular (common, master, worker)</li>
-          <li class="toc-subitem">3.5 Despliegue Desatendido con un solo comando (vagrant up)</li>
-          <li class="toc-subitem">3.6 Ciclo de Vida del Laboratorio (status, halt, ssh, destroy)</li>
+          <li class="toc-subitem"><a href="#sec-3-1">3.1 Arquitectura de Automatización con Vagrant</a></li>
+          <li class="toc-subitem"><a href="#sec-3-2">3.2 Estructura del Proyecto de Infraestructura</a></li>
+          <li class="toc-subitem"><a href="#sec-3-3">3.3 Archivo Vagrantfile Multi-Máquina</a></li>
+          <li class="toc-subitem"><a href="#sec-3-4">3.4 Scripts de Aprovisionamiento Modular (common, master, worker)</a></li>
+          <li class="toc-subitem"><a href="#sec-3-5">3.5 Despliegue Desatendido con un solo comando (vagrant up)</a></li>
+          <li class="toc-subitem"><a href="#sec-3-6">3.6 Ciclo de Vida del Laboratorio (status, halt, ssh, destroy)</a></li>
         </ul>
       </li>
-      <li class="toc-item">4. Sección 3: Instalación, Acceso y Verificación Gráfica del Kubernetes Dashboard
+      <li class="toc-item"><a href="#sec-4">4. Sección 3: Instalación, Acceso y Verificación Gráfica del Kubernetes Dashboard</a>
         <ul class="toc-sublist">
-          <li class="toc-subitem">4.1 Despliegue de los Componentes Oficiales del Dashboard</li>
-          <li class="toc-subitem">4.2 Verificación del Estado de los Pods del Dashboard</li>
-          <li class="toc-subitem">4.3 Creación de Cuenta de Servicio y Privilegios Administrativos (RBAC)</li>
-          <li class="toc-subitem">4.4 Comprobación de la Cuenta de Servicio Creada</li>
-          <li class="toc-subitem">4.5 Generación del Token de Autenticación Bearer</li>
-          <li class="toc-subitem">4.6 Acceso Seguro mediante Kubectl Proxy</li>
-          <li class="toc-subitem">4.7 Inicio de Sesión y Verificación Visual del Panel</li>
+          <li class="toc-subitem"><a href="#sec-4-1">4.1 Despliegue de los Componentes Oficiales del Dashboard</a></li>
+          <li class="toc-subitem"><a href="#sec-4-2">4.2 Verificación del Estado de los Pods del Dashboard</a></li>
+          <li class="toc-subitem"><a href="#sec-4-3">4.3 Creación de Cuenta de Servicio y Privilegios Administrativos (RBAC)</a></li>
+          <li class="toc-subitem"><a href="#sec-4-4">4.4 Comprobación de la Cuenta de Servicio Creada</a></li>
+          <li class="toc-subitem"><a href="#sec-4-5">4.5 Generación del Token de Autenticación Bearer</a></li>
+          <li class="toc-subitem"><a href="#sec-4-6">4.6 Acceso Seguro mediante Kubectl Proxy</a></li>
+          <li class="toc-subitem"><a href="#sec-4-7">4.7 Inicio de Sesión y Verificación Visual del Panel</a></li>
         </ul>
       </li>
-      <li class="toc-item">5. Sección 4: Ejemplo Práctico de Despliegue en el Cluster (Nginx)
+      <li class="toc-item"><a href="#sec-5">5. Sección 4: Ejemplo Práctico de Despliegue en el Cluster (Nginx)</a>
         <ul class="toc-sublist">
-          <li class="toc-subitem">5.1 Creación del Deployment de Nginx</li>
-          <li class="toc-subitem">5.2 Inspección Detallada de Recursos del Cluster</li>
-          <li class="toc-subitem">5.3 Exposición Externa mediante Servicio NodePort</li>
-          <li class="toc-subitem">5.4 Verificación de Conectividad HTTP y Acceso Externo</li>
-          <li class="toc-subitem">5.5 Acceso Temporal mediante Port-Forward y Limpieza de Recursos</li>
+          <li class="toc-subitem"><a href="#sec-5-1">5.1 Creación del Deployment de Nginx</a></li>
+          <li class="toc-subitem"><a href="#sec-5-2">5.2 Inspección Detallada de Recursos del Cluster</a></li>
+          <li class="toc-subitem"><a href="#sec-5-3">5.3 Exposición Externa mediante Servicio NodePort</a></li>
+          <li class="toc-subitem"><a href="#sec-5-4">5.4 Verificación de Conectividad HTTP y Acceso Externo</a></li>
+          <li class="toc-subitem"><a href="#sec-5-5">5.5 Acceso Temporal mediante Port-Forward y Limpieza de Recursos</a></li>
         </ul>
       </li>
-      <li class="toc-item">6. Resolución de Problemas Frecuentes (Troubleshooting)</li>
+      <li class="toc-item"><a href="#sec-6">6. Resolución de Problemas Frecuentes (Troubleshooting)</a></li>
     </ul>
   </div>
 
   <!-- 1. ARQUITECTURA -->
-  <h2>1. Arquitectura del Laboratorio</h2>
+  <h2 id="sec-1">1. Arquitectura del Laboratorio</h2>
   <p>
     Para simular con fidelidad un entorno de producción sobre una máquina anfitriona Ubuntu 20.04 sin saturar los recursos físicos, se implementa una arquitectura virtualizada aislada compuesta por un nodo <strong>Master (Plano de Control)</strong> y un nodo <strong>Worker</strong>.
   </p>
 
-  <h3>1.1 Diagrama de Topología de Red y Componentes</h3>
+  <h3 id="sec-1-1">1.1 Diagrama de Topología de Red y Componentes</h3>
   <div class="diagram-box">+-----------------------------------------------------------------------------------+
 |  HOST FÍSICO: Ubuntu 20.04 LTS (con VirtualBox 7.0 instalado)                     |
 |  IP Red Host-Only: 192.168.56.1                                                   |
@@ -585,7 +600,7 @@
        ^                                                    ^
        +================ Red de Pods (CIDR: 10.244.0.0/16) =+</div>
 
-  <h3>1.2 Matriz de Hardware e IP</h3>
+  <h3 id="sec-1-2">1.2 Matriz de Hardware e IP</h3>
   <table>
     <thead>
       <tr>
@@ -620,7 +635,7 @@
     </tbody>
   </table>
 
-  <h3>1.3 Alertas Críticas de Producción (Trampas Habituales)</h3>
+  <h3 id="sec-1-3">1.3 Alertas Críticas de Producción (Trampas Habituales)</h3>
   <div class="alert alert-warning">
     <div class="alert-title">Advertencia 1: Detección de Interfaz en Red Dual (NAT + Host-Only)</div>
     En VirtualBox con red dual, ambas máquinas tienen la misma IP en NAT (<code>10.0.2.15</code>). Tanto <code>kubeadm init</code> como el CNI Flannel deben forzarse a enlazarse a la interfaz Host-Only (<code>enp0s8</code> / <code>192.168.56.x</code>). De lo contrario, los nodos intentarán comunicarse por la IP colisionada y el cluster no funcionará.
@@ -639,11 +654,11 @@
   <!-- SECCIÓN 1: MANUAL -->
   <div class="page-break"></div>
   <div class="section-banner">
-    <h2>2. Sección 1: Despliegue Manual Paso a Paso con Kubeadm</h2>
+    <h2 id="sec-2">2. Sección 1: Despliegue Manual Paso a Paso con Kubeadm</h2>
     <p>Objetivo pedagógico: Comprender en profundidad cada capa del sistema, kernel, runtime de contenedores y red interna.</p>
   </div>
 
-  <h3>2.1 Creación de la Red Solo-Anfitrión en VirtualBox (vboxnet0)</h3>
+  <h3 id="sec-2-1">2.1 Creación de la Red Solo-Anfitrión en VirtualBox (vboxnet0)</h3>
   <p>
     Antes de crear o iniciar las máquinas virtuales, es indispensable aprovisionar la red privada aislada (Host-Only) en VirtualBox que interconectará el nodo de control, el worker y la máquina anfitriona.
   </p>
@@ -660,7 +675,7 @@
     <li>Haz clic en <strong>Aplicar</strong>.</li>
   </ol>
 
-  <h3>2.2 Creación y Configuración de VMs en VirtualBox 7.0</h3>
+  <h3 id="sec-2-2">2.2 Creación y Configuración de VMs en VirtualBox 7.0</h3>
   <p>Descarga la imagen oficial para servidores de Ubuntu 22.04 LTS (Jammy Jellyfish):</p>
   <ul>
     <li><strong>URL de descarga:</strong> <code>https://releases.ubuntu.com/22.04/ubuntu-22.04.5-live-server-amd64.iso</code></li>
@@ -681,7 +696,7 @@
     Si instalas el Master y lo clonas para crear el Worker, marca obligatoriamente: <strong>"Generar nuevas direcciones MAC para todos los adaptadores de red"</strong>. Si tienen la misma MAC, la red fallará.
   </div>
 
-  <h4>2.2.1 Creación de la Red Solo-Anfitrión en VirtualBox</h4>
+  <h4 id="sec-2-2-1">2.2.1 Creación de la Red Solo-Anfitrión en VirtualBox</h4>
   <p>
     Antes de crear las máquinas virtuales, es indispensable aprovisionar la red privada aislada que interconectará los nodos. En la consola principal de VirtualBox accedemos al menú lateral <strong>Herramientas -&gt; Redes</strong> y pulsamos en el botón <strong>+</strong> (<strong>Crear</strong>) para generar la red sólo-anfitrión <code>vboxnet0</code> con direccionamiento estático <code>192.168.56.1/24</code> y el servidor DHCP deshabilitado:
   </p>
@@ -691,7 +706,7 @@
   </figure>
 
   <div class="page-break"></div>
-  <h4>2.2.2 Asistente Visual Paso a Paso para la Creación de la VM Master (k8s-master)</h4>
+  <h4 id="sec-2-2-2">2.2.2 Asistente Visual Paso a Paso para la Creación de la VM Master (k8s-master)</h4>
   <p>
     A continuación se ilustran ordenadamente los 20 pasos para la creación de la máquina virtual del plano de control (<code>k8s-master</code>) y la instalación guiada de Ubuntu Server 22.04.5 LTS:
   </p>
@@ -887,7 +902,7 @@
   </div>
 
   <div class="page-break"></div>
-  <h4>2.2.3 Asistente Visual Paso a Paso para la Creación de la VM Worker (k8s-worker1)</h4>
+  <h4 id="sec-2-2-3">2.2.3 Asistente Visual Paso a Paso para la Creación de la VM Worker (k8s-worker1)</h4>
   <p>
     A continuación se ilustran ordenadamente los 20 pasos para la creación de la máquina virtual del nodo de trabajo (<code>k8s-worker1</code>):
   </p>
@@ -1083,7 +1098,7 @@
   </div>
 
   <div class="page-break"></div>
-  <h3>2.3 Configuración de Idioma y Teclado Español</h3>
+  <h3 id="sec-2-3">2.3 Configuración de Idioma y Teclado Español</h3>
   <p>
     Por defecto, Ubuntu Server se instala con la distribución de teclado en inglés (US). Esto genera errores de tipeo al introducir caracteres frecuentes de administración en consola como guiones (<code>-</code>), tuberías (<code>|</code>), barras (<code>/</code>), almohadillas (<code>#</code>) o comillas.
   </p>
@@ -1097,7 +1112,7 @@ sudo loadkeys es</code></pre>
     <code>localectl</code> persiste la configuración en <code>/etc/default/keyboard</code> para todos los futuros arranques, mientras que <code>loadkeys es</code> aplica la tabla de teclas de inmediato en la sesión TTY actual.
   </p>
 
-  <h3>2.4 Persistencia de Red: Bloqueo de Cloud-Init y Netplan Estático</h3>
+  <h3 id="sec-2-4">2.4 Persistencia de Red: Bloqueo de Cloud-Init y Netplan Estático</h3>
   <p>
     En Ubuntu Server 22.04 LTS, el servicio <code>cloud-init</code> gestiona la configuración de red y reescribe los archivos de Netplan al reiniciar el sistema. Si se modifica Netplan sin desactivar la generación de red de <code>cloud-init</code>, la dirección IP estática se perderá tras reiniciar la máquina virtual.
   </p>
@@ -1194,7 +1209,7 @@ EOF'</code></pre>
   <pre><code>ping -c 3 192.168.56.10
 ping -c 3 192.168.56.11</code></pre>
 
-  <h3>2.5 Preparación Base del Sistema Operativo (SWAP, Kernel y Sysctl)</h3>
+  <h3 id="sec-2-5">2.5 Preparación Base del Sistema Operativo (SWAP, Kernel y Sysctl)</h3>
   <p>Ejecuta los siguientes pasos en <strong>ambas máquinas virtuales</strong>:</p>
 
   <h4>2.5.1 Desactivación Permanente de SWAP</h4>
@@ -1219,7 +1234,7 @@ EOF
 
 sudo sysctl --system</code></pre>
 
-  <h3>2.6 Instalación de Containerd y Dependencias del Sistema (conntrack, socat)</h3>
+  <h3 id="sec-2-6">2.6 Instalación de Containerd y Dependencias del Sistema (conntrack, socat)</h3>
   <p>
     Desde Kubernetes v1.24, el subsistema <code>dockershim</code> fue removido. Instalaremos <code>containerd</code> como runtime estándar de contenedores (CRI), junto con dos paquetes fundamentales del sistema operativo:
   </p>
@@ -1242,7 +1257,7 @@ sudo systemctl restart containerd
 sudo systemctl enable containerd
 sudo systemctl status containerd --no-pager</code></pre>
 
-  <h3>2.7 Instalación de Herramientas Kubernetes v1.31 (pkgs.k8s.io)</h3>
+  <h3 id="sec-2-7">2.7 Instalación de Herramientas Kubernetes v1.31 (pkgs.k8s.io)</h3>
   <p>Ejecuta en <strong>ambos nodos</strong>:</p>
   <pre><code># 1. Instalar dependencias de transporte seguro
 sudo apt-get update
@@ -1278,7 +1293,7 @@ sudo apt update</code></pre>
   </div>
 
   <div class="page-break"></div>
-  <h3>2.8 Inicialización del Plano de Control (Master), Flannel CNI y Registros Reales</h3>
+  <h3 id="sec-2-8">2.8 Inicialización del Plano de Control (Master), Flannel CNI y Registros Reales</h3>
   <p>Los pasos de esta subsección se ejecutan en <strong>k8s-master</strong>.</p>
   
   <h4>2.8.1 Asegurar dependencias de red en el master</h4>
@@ -1404,7 +1419,7 @@ curl -sSL "${FLANNEL_URL}" -o kube-flannel.yml</code></pre>
 kubectl get nodes
 kubectl get pods -n kube-system</code></pre>
 
-  <h3>2.9 Unión del Nodo Worker al Cluster con Dependencias y Registros Reales</h3>
+  <h3 id="sec-2-9">2.9 Unión del Nodo Worker al Cluster con Dependencias y Registros Reales</h3>
   <p>En la máquina virtual <strong>k8s-worker1</strong>:</p>
 
   <h4>2.9.1 Asegurar dependencias de red en el worker</h4>
@@ -1442,7 +1457,7 @@ NAME          STATUS   ROLES           AGE   VERSION    INTERNAL-IP     EXTERNAL
 k8s-master    Ready    control-plane   49m   v1.31.14   192.168.56.10   &lt;none&gt;        Ubuntu 22.04.5 LTS   5.15.0-203-generic   containerd://2.2.1
 k8s-worker1   Ready    &lt;none&gt;          21m   v1.31.14   192.168.56.11   &lt;none&gt;        Ubuntu 22.04.5 LTS   5.15.0-203-generic   containerd://2.2.1</code></pre>
 
-  <h3>2.10 Conexión Remota No Destructiva desde el Host Anfitrión (Merge Kubeconfig)</h3>
+  <h3 id="sec-2-10">2.10 Conexión Remota No Destructiva desde el Host Anfitrión (Merge Kubeconfig)</h3>
   <div class="alert alert-caution">
     <div class="alert-title">Precaución: No sobrescribas tu archivo ~/.kube/config</div>
     Si ya utilizas Kubernetes en tu equipo host (ej. Minikube, Docker Desktop, k3s, EKS, GKE), ejecutar <code>scp ... ~/.kube/config</code> destruirá tus contextos y configuraciones preexistentes. A continuación se detalla cómo fusionar la nueva configuración de forma segura y no destructiva.
@@ -1508,11 +1523,11 @@ k8s-worker1   Ready    &lt;none&gt;          21m   v1.31.14   192.168.56.11   &l
   <!-- SECCIÓN 2: VAGRANT -->
   <div class="page-break"></div>
   <div class="section-banner">
-    <h2>3. Sección 2: Automatización Completa con Vagrant (IaC)</h2>
+    <h2 id="sec-3">3. Sección 2: Automatización Completa con Vagrant (IaC)</h2>
     <p>Objetivo pedagógico: Aprovisionar todo el laboratorio productivo de forma desatendida mediante Infrastructure as Code.</p>
   </div>
 
-  <h3>3.1 Arquitectura de Automatización con Vagrant</h3>
+  <h3 id="sec-3-1">3.1 Arquitectura de Automatización con Vagrant</h3>
   <p>
     Vagrant permite definir y aprovisionar entornos de máquinas virtuales de manera reproducible. Gracias al <code>Vagrantfile</code> y a los scripts de provisión shell modulares, todo el proceso manual visto en la Sección 1 se ejecuta automáticamente en orden:
   </p>
@@ -1525,7 +1540,7 @@ k8s-worker1   Ready    &lt;none&gt;          21m   v1.31.14   192.168.56.11   &l
     <li>Ejecución de <code>scripts/common.sh</code> y <code>scripts/worker.sh</code>, incorporando el worker al cluster sin intervención humana.</li>
   </ol>
 
-  <h3>3.2 Estructura del Proyecto de Infraestructura</h3>
+  <h3 id="sec-3-2">3.2 Estructura del Proyecto de Infraestructura</h3>
   <pre><code>poc-kubeadm-ubuntu/
 ├── Vagrantfile                   # Declaración de VMs, red y provisioners
 ├── scripts/
@@ -1534,7 +1549,7 @@ k8s-worker1   Ready    &lt;none&gt;          21m   v1.31.14   192.168.56.11   &l
 │   └── worker.sh                # Espera activa y ejecución de kubeadm join
 └── configs/                      # Carpeta compartida (kubeconfig y tokens)</code></pre>
 
-  <h3>3.3 Archivo Vagrantfile Multi-Máquina</h3>
+  <h3 id="sec-3-3">3.3 Archivo Vagrantfile Multi-Máquina</h3>
   <pre><code>Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/jammy64"
   config.vm.synced_folder "./configs", "/vagrant_configs", create: true
@@ -1570,7 +1585,7 @@ k8s-worker1   Ready    &lt;none&gt;          21m   v1.31.14   192.168.56.11   &l
 end</code></pre>
 
   <div class="page-break"></div>
-  <h3>3.4 Scripts de Aprovisionamiento Modular</h3>
+  <h3 id="sec-3-4">3.4 Scripts de Aprovisionamiento Modular</h3>
 
   <h4>3.4.1 Script Común: <code>scripts/common.sh</code></h4>
   <pre><code>#!/bin/bash
@@ -1661,7 +1676,7 @@ done
 
 bash /vagrant_configs/join.sh &gt; /dev/null</code></pre>
 
-  <h3>3.5 Despliegue Desatendido con un solo comando</h3>
+  <h3 id="sec-3-5">3.5 Despliegue Desatendido con un solo comando</h3>
   <pre><code># 1. En el Host Ubuntu 20.04:
 sudo apt-get update &amp;&amp; sudo apt-get install -y virtualbox vagrant
 
@@ -1672,7 +1687,7 @@ vagrant up
 export KUBECONFIG=$(pwd)/configs/config
 kubectl get nodes -o wide</code></pre>
 
-  <h3>3.6 Gestión del Ciclo de Vida del Cluster</h3>
+  <h3 id="sec-3-6">3.6 Gestión del Ciclo de Vida del Cluster</h3>
   <table>
     <thead>
       <tr>
@@ -1713,7 +1728,7 @@ kubectl get nodes -o wide</code></pre>
   <!-- SECCIÓN 3: KUBERNETES DASHBOARD -->
   <div class="page-break"></div>
   <div class="section-banner">
-    <h2>4. Sección 3: Instalación, Acceso y Verificación Gráfica del Kubernetes Dashboard</h2>
+    <h2 id="sec-4">4. Sección 3: Instalación, Acceso y Verificación Gráfica del Kubernetes Dashboard</h2>
     <p>Objetivo pedagógico: Desplegar y acceder a la interfaz gráfica oficial del cluster, validando permisos RBAC y monitorización visual.</p>
   </div>
 
@@ -1721,7 +1736,7 @@ kubectl get nodes -o wide</code></pre>
     Para monitorizar y gestionar visualmente los recursos del cluster sin depender exclusivamente de la línea de comandos, desplegamos la interfaz gráfica oficial: el <strong>Kubernetes Dashboard</strong>. A continuación se detalla el procedimiento completo, incluyendo la verificación de estado de los pods, la creación declarativa de la cuenta administrativa RBAC, la obtención del token Bearer y las capturas visuales de la interfaz.
   </p>
 
-  <h3>4.1 Despliegue de los Componentes Oficiales del Dashboard</h3>
+  <h3 id="sec-4-1">4.1 Despliegue de los Componentes Oficiales del Dashboard</h3>
   <p>
     Aplica el manifiesto recomendado oficial de Kubernetes (versión v2.7.0), el cual genera el namespace dedicado <code>kubernetes-dashboard</code>, las cuentas de servicio, certificados autofirmados, roles RBAC y los deployments de la interfaz y del recolector de métricas:
   </p>
@@ -1742,7 +1757,7 @@ deployment.apps/kubernetes-dashboard created
 service/dashboard-metrics-scraper created
 deployment.apps/dashboard-metrics-scraper created</code></pre>
 
-  <h3>4.2 Verificación del Estado de los Pods del Dashboard</h3>
+  <h3 id="sec-4-2">4.2 Verificación del Estado de los Pods del Dashboard</h3>
   <p>
     Antes de intentar acceder, comprobamos que tanto el pod principal del Dashboard como el pod auxiliar <code>dashboard-metrics-scraper</code> hayan descargado sus imágenes y alcancen el estado <code>Running</code>:
   </p>
@@ -1752,7 +1767,7 @@ deployment.apps/dashboard-metrics-scraper created</code></pre>
 dashboard-metrics-scraper-6b96ff7878-2xhlz   1/1     Running   0          31s
 kubernetes-dashboard-8696f5f494-hxd9c        1/1     Running   0          31s</code></pre>
 
-  <h3>4.3 Creación de Cuenta de Servicio y Privilegios Administrativos (RBAC)</h3>
+  <h3 id="sec-4-3">4.3 Creación de Cuenta de Servicio y Privilegios Administrativos (RBAC)</h3>
   <p>
     Por defecto, el Dashboard se despliega con permisos mínimos restringidos. Para administrar y visualizar todos los namespaces y cargas de trabajo del cluster, creamos un usuario de servicio (<code>ServiceAccount</code>) con rol de superusuario (<code>cluster-admin</code>).
   </p>
@@ -1782,14 +1797,14 @@ subjects:
   <pre><code>serviceaccount/admin-user created
 clusterrolebinding.rbac.authorization.k8s.io/admin-user created</code></pre>
 
-  <h3>4.4 Comprobación de la Cuenta de Servicio Creada</h3>
+  <h3 id="sec-4-4">4.4 Comprobación de la Cuenta de Servicio Creada</h3>
   <p>Verificamos que el objeto <code>ServiceAccount</code> existe correctamente registrado en el namespace <code>kubernetes-dashboard</code>:</p>
   <pre><code>kubectl get serviceaccount admin-user -n kubernetes-dashboard</code></pre>
   <p><strong>Salida real de terminal:</strong></p>
   <pre><code>NAME         SECRETS   AGE
 admin-user   0         38s</code></pre>
 
-  <h3>4.5 Generación del Token de Autenticación Bearer</h3>
+  <h3 id="sec-4-5">4.5 Generación del Token de Autenticación Bearer</h3>
   <p>
     En Kubernetes moderno (v1.24+ y v1.31), los tokens de ServiceAccount ya no se generan indefinidamente en secrets por defecto, sino que se solicitan mediante la API de tokens temporales de <code>kubectl</code>:
   </p>
@@ -1836,7 +1851,7 @@ type: kubernetes.io/service-account-token</code></pre>
     Los tokens permanentes <strong>no son seguros para su uso en entornos de producción</strong>, ya que vulneran el principio de menor privilegio al carecer de caducidad y rotación automática. Si una credencial estática de superadministrador (<code>cluster-admin</code>) se filtra, el cluster queda permanentemente comprometido hasta su revocación manual. Sin embargo, para esta prueba local de laboratorio y entornos de aprendizaje, su uso es plenamente válido por comodidad.
   </div>
 
-  <h3>4.6 Acceso Seguro mediante Kubectl Proxy</h3>
+  <h3 id="sec-4-6">4.6 Acceso Seguro mediante Kubectl Proxy</h3>
   <p>
     Para conectarse de forma segura desde el equipo anfitrión físico sin exponer el Dashboard directamente a redes externas no cifradas, iniciamos el túnel local de <code>kubectl proxy</code>:
   </p>
@@ -1848,7 +1863,7 @@ type: kubernetes.io/service-account-token</code></pre>
   </p>
   <pre><code>http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/</code></pre>
 
-  <h3>4.7 Inicio de Sesión y Verificación Visual del Panel</h3>
+  <h3 id="sec-4-7">4.7 Inicio de Sesión y Verificación Visual del Panel</h3>
   <p>
     Al acceder a la URL indicada, el Dashboard presenta la pantalla de autenticación. Selecciona la opción <strong>Token</strong>, pega el token generado en el paso 4.5 y pulsa sobre <strong>Sign in</strong>:
   </p>
@@ -1868,11 +1883,11 @@ type: kubernetes.io/service-account-token</code></pre>
   <!-- SECCIÓN 4: EJEMPLO DE DESPLIEGUE -->
   <div class="page-break"></div>
   <div class="section-banner">
-    <h2>5. Sección 4: Ejemplo Práctico de Despliegue en el Cluster (Nginx)</h2>
+    <h2 id="sec-5">5. Sección 4: Ejemplo Práctico de Despliegue en el Cluster (Nginx)</h2>
     <p>Objetivo pedagógico: Validar la operatividad del cluster desplegando una carga de trabajo, exponiéndola vía NodePort y verificando tráfico HTTP.</p>
   </div>
 
-  <h3>5.1 Creación del Deployment de Nginx</h3>
+  <h3 id="sec-5-1">5.1 Creación del Deployment de Nginx</h3>
   <p>
     Desplegamos un servidor web Nginx básico en el cluster utilizando un objeto de tipo <code>Deployment</code> en el namespace <code>default</code>:
   </p>
@@ -1880,7 +1895,7 @@ type: kubernetes.io/service-account-token</code></pre>
   <p><strong>Salida real del comando:</strong></p>
   <pre><code>deployment.apps/nginx-test created</code></pre>
 
-  <h3>5.2 Inspección Detallada de Recursos del Cluster</h3>
+  <h3 id="sec-5-2">5.2 Inspección Detallada de Recursos del Cluster</h3>
   <p>
     Tras emitir la orden de creación, Kubernetes gestiona automáticamente la jerarquía de objetos: el Deployment gestiona un ReplicaSet, y este a su vez supervisa la creación y estado de salud de los Pods.
   </p>
@@ -1906,7 +1921,7 @@ nginx-test-5b77bfd686   1         1         1       11m   nginx        nginx    
   <pre><code>NAME                          READY   STATUS    RESTARTS   AGE   IP           NODE          NOMINATED NODE   READINESS GATES
 nginx-test-5b77bfd686-xsbgg   1/1     Running   0          11m   10.244.1.2   k8s-worker1   &lt;none&gt;           &lt;none&gt;</code></pre>
 
-  <h3>5.3 Exposición Externa mediante Servicio NodePort</h3>
+  <h3 id="sec-5-3">5.3 Exposición Externa mediante Servicio NodePort</h3>
   <p>
     Para acceder al servidor web Nginx desde el equipo anfitrión (o desde fuera del cluster), exponemos el despliegue creando un objeto <code>Service</code> de tipo <code>NodePort</code>. Este tipo de servicio abre un puerto aleatorio en el rango predeterminado de Kubernetes (<code>30000-32767</code>) en <strong>todos</strong> los nodos del cluster (tanto en <code>k8s-master</code> como en <code>k8s-worker1</code>):
   </p>
@@ -1924,7 +1939,7 @@ nginx-test   NodePort    10.98.102.4   &lt;none&gt;        80:30482/TCP   10m   
     En la columna <code>PORT(S)</code> observamos el mapeo <code>80:30482/TCP</code>. El puerto interno del contenedor es el <code>80</code>, mientras que el puerto expuesto en los nodos del cluster es el <code>30482</code>. En su entorno de laboratorio este puerto se asignará de manera aleatoria entre el 30000 y el 32767.
   </div>
 
-  <h3>5.4 Verificación de Conectividad HTTP y Acceso Externo</h3>
+  <h3 id="sec-5-4">5.4 Verificación de Conectividad HTTP y Acceso Externo</h3>
   <p>
     Dado que el servicio <code>NodePort</code> publica el puerto en todos los nodos del cluster, podemos consultar cualquiera de las IPs de la red Host-Only (<code>192.168.56.0/24</code>) para acceder al servicio.
   </p>
@@ -2012,7 +2027,7 @@ security features and capabilities please refer to
     Aunque el pod de Nginx está ejecutándose en el worker (<code>k8s-worker1</code>), la petición a la IP del master responde correctamente gracias a <code>kube-proxy</code> y Flannel CNI, que gestionan el balanceo y enrutamiento interno entre nodos automáticamente.
   </div>
 
-  <h3>5.5 Acceso Temporal mediante Port-Forward y Limpieza de Recursos</h3>
+  <h3 id="sec-5-5">5.5 Acceso Temporal mediante Port-Forward y Limpieza de Recursos</h3>
   <p>
     Además de exponer un servicio mediante <code>NodePort</code>, Kubernetes permite redirigir tráfico de forma temporal para pruebas y depuración inmediata utilizando el comando <code>kubectl port-forward</code>. Este comando abre un túnel directo desde un puerto local hacia el Pod o Deployment sin necesidad de un objeto Service:
   </p>
@@ -2027,7 +2042,7 @@ security features and capabilities please refer to
 
   <!-- TROUBLESHOOTING -->
   <div class="page-break"></div>
-  <h2>6. Resolución de Problemas Frecuentes (Troubleshooting)</h2>
+  <h2 id="sec-6">6. Resolución de Problemas Frecuentes (Troubleshooting)</h2>
 
   <div class="alert alert-important">
     <div class="alert-title">Fallo 1: "The connection to the server 10.0.2.15:6443 was refused"</div>

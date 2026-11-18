@@ -10,44 +10,44 @@
 ## Tabla de Contenidos
 
 1. [Arquitectura del Laboratorio](#1-arquitectura-del-laboratorio)
-   - 1.1 Diagrama de Topología
-   - 1.2 Matriz de Hardware e IP
-   - 1.3 Alertas Críticas de Producción
+   - [1.1 Diagrama de Topología](#11-diagrama-de-topología)
+   - [1.2 Matriz de Hardware e IP](#12-matriz-de-hardware-e-ip)
+   - [1.3 Alertas Críticas de Producción](#13-alertas-críticas-de-producción)
 2. [Sección 1: Despliegue Manual Paso a Paso con Kubeadm](#2-sección-1-despliegue-manual-paso-a-paso-con-kubeadm)
-   - 2.1 Creación de la Red Solo-Anfitrión en VirtualBox (`vboxnet0`)
-   - 2.2 Creación y Configuración de VMs en VirtualBox 7.0
-     * 2.2.1 Creación de la Red Solo-Anfitrión (`step_00.png`)
-     * 2.2.2 Guía Paso a Paso para la VM Master (`k8s-master`)
-     * 2.2.3 Guía Paso a Paso para la VM Worker (`k8s-worker1`)
-   - 2.3 Configuración de Idioma y Teclado Español
-   - 2.4 Persistencia de Red: Bloqueo de Cloud-Init y Netplan Estático
-   - 2.5 Preparación Base del Sistema Operativo (SWAP, Kernel y Sysctl)
-   - 2.6 Instalación de Containerd y Dependencias del Sistema (`conntrack`, `socat`)
-   - 2.7 Instalación de Herramientas Kubernetes (v1.31 en pkgs.k8s.io)
-   - 2.8 Inicialización del Plano de Control (Master), Flannel CNI y Registros Reales
-   - 2.9 Unión del Nodo Worker al Cluster con Dependencias y Registros Reales
-   - 2.10 Conexión Remota No Destructiva desde el Host Anfitrión (Merge Kubeconfig)
+   - [2.1 Creación de la Red Solo-Anfitrión en VirtualBox (`vboxnet0`)](#21-creación-de-la-red-solo-anfitrión-en-virtualbox-vboxnet0)
+   - [2.2 Creación y Configuración de VMs en VirtualBox 7.0](#22-creación-y-configuración-de-vms-en-virtualbox-70)
+     * [2.2.1 Creación de la Red Solo-Anfitrión (`step_00.png`)](#221-creación-de-la-red-solo-anfitrión-en-virtualbox-step_00png)
+     * [2.2.2 Guía Paso a Paso para la VM Master (`k8s-master`)](#222-asistente-visual-paso-a-paso-para-la-creación-de-la-vm-master-k8s-master)
+     * [2.2.3 Guía Paso a Paso para la VM Worker (`k8s-worker1`)](#223-asistente-visual-paso-a-paso-para-la-creación-de-la-vm-worker-k8s-worker1)
+   - [2.3 Configuración de Idioma y Teclado Español](#23-configuración-de-idioma-y-teclado-español)
+   - [2.4 Persistencia de Red: Bloqueo de Cloud-Init y Netplan Estático](#24-persistencia-de-red-bloqueo-de-cloud-init-y-netplan-estático)
+   - [2.5 Preparación Base del Sistema Operativo (SWAP, Kernel y Sysctl)](#25-preparación-base-del-sistema-operativo-swap-kernel-y-sysctl)
+   - [2.6 Instalación de Containerd y Dependencias del Sistema (`conntrack`, `socat`)](#26-instalación-de-containerd-y-dependencias-del-sistema-conntrack-socat)
+   - [2.7 Instalación de Herramientas Kubernetes (v1.31 en pkgs.k8s.io)](#27-instalación-de-herramientas-kubernetes-v131-en-pkgsk8sio)
+   - [2.8 Inicialización del Plano de Control (Master), Flannel CNI y Registros Reales](#28-inicialización-del-plano-de-control-master-flannel-cni-y-registros-reales)
+   - [2.9 Unión del Nodo Worker al Cluster con Dependencias y Registros Reales](#29-unión-del-nodo-worker-al-cluster-con-dependencias-y-registros-reales)
+   - [2.10 Conexión Remota No Destructiva desde el Host Anfitrión (Merge Kubeconfig)](#210-conexión-remota-no-destructiva-desde-el-host-anfitrión-merge-kubeconfig)
 3. [Sección 2: Automatización Completa con Vagrant (IaC)](#3-sección-2-automatización-completa-con-vagrant-iac)
-   - 3.1 Introducción a Vagrant para Kubernetes
-   - 3.2 Estructura del Proyecto de Automatización
-   - 3.3 El Archivo `Vagrantfile` Multi-Máquina
-   - 3.4 Scripts Shell de Aprovisionamiento Modular
-   - 3.5 Despliegue Desatendido con `vagrant up`
-   - 3.6 Gestión del Ciclo de Vida del Cluster
+   - [3.1 Introducción a Vagrant para Kubernetes](#31-introducción-a-vagrant-para-kubernetes)
+   - [3.2 Estructura del Proyecto de Automatización](#32-estructura-del-proyecto-de-automatización)
+   - [3.3 El Archivo `Vagrantfile` Multi-Máquina](#33-el-archivo-vagrantfile-multi-máquina)
+   - [3.4 Scripts Shell de Aprovisionamiento Modular](#34-scripts-shell-de-aprovisionamiento-modular)
+   - [3.5 Despliegue Desatendido con `vagrant up`](#35-despliegue-desatendido-con-vagrant-up)
+   - [3.6 Gestión del Ciclo de Vida del Cluster](#36-gestión-del-ciclo-de-vida-del-cluster)
 4. [Sección 3: Instalación, Acceso y Verificación Gráfica del Kubernetes Dashboard](#4-sección-3-instalación-acceso-y-verificación-gráfica-del-kubernetes-dashboard)
-   - 4.1 Despliegue de los Componentes Oficiales del Dashboard
-   - 4.2 Verificación del Estado de los Pods del Dashboard
-   - 4.3 Creación de Cuenta de Servicio y Privilegios Administrativos (RBAC)
-   - 4.4 Comprobación de la Cuenta de Servicio Creada
-   - 4.5 Generación del Token de Autenticación Bearer
-   - 4.6 Acceso Seguro mediante Kubectl Proxy
-   - 4.7 Inicio de Sesión y Verificación Visual del Panel
+   - [4.1 Despliegue de los Componentes Oficiales del Dashboard](#41-despliegue-de-los-componentes-oficiales-del-dashboard)
+   - [4.2 Verificación del Estado de los Pods del Dashboard](#42-verificación-del-estado-de-los-pods-del-dashboard)
+   - [4.3 Creación de Cuenta de Servicio y Privilegios Administrativos (RBAC)](#43-creación-de-cuenta-de-servicio-y-privilegios-administrativos-rbac)
+   - [4.4 Comprobación de la Cuenta de Servicio Creada](#44-comprobación-de-la-cuenta-de-servicio-creada)
+   - [4.5 Generación del Token de Autenticación Bearer](#45-generación-del-token-de-autenticación-bearer)
+   - [4.6 Acceso Seguro mediante Kubectl Proxy](#46-acceso-seguro-mediante-kubectl-proxy)
+   - [4.7 Inicio de Sesión y Verificación Visual del Panel](#47-inicio-de-sesión-y-verificación-visual-del-panel)
 5. [Sección 4: Ejemplo Práctico de Despliegue en el Cluster (Nginx)](#5-sección-4-ejemplo-práctico-de-despliegue-en-el-cluster-nginx)
-   - 5.1 Creación del Deployment de Nginx
-   - 5.2 Inspección Detallada de Recursos del Cluster
-   - 5.3 Exposición Externa mediante Servicio NodePort
-   - 5.4 Verificación de Conectividad HTTP y Acceso Externo
-   - 5.5 Acceso Temporal mediante Port-Forward y Limpieza de Recursos
+   - [5.1 Creación del Deployment de Nginx](#51-creación-del-deployment-de-nginx)
+   - [5.2 Inspección Detallada de Recursos del Cluster](#52-inspección-detallada-de-recursos-del-cluster)
+   - [5.3 Exposición Externa mediante Servicio NodePort](#53-exposición-externa-mediante-servicio-nodeport)
+   - [5.4 Verificación de Conectividad HTTP y Acceso Externo](#54-verificación-de-conectividad-http-y-acceso-externo)
+   - [5.5 Acceso Temporal mediante Port-Forward y Limpieza de Recursos](#55-acceso-temporal-mediante-port-forward-y-limpieza-de-recursos)
 6. [Resolución de Problemas Frecuentes (Troubleshooting)](#6-resolución-de-problemas-frecuentes-troubleshooting)
 
 ---
